@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Slide } from "@mui/material";
+import { FaCcVisa, FaCcMastercard, FaCcAmex, FaCcDiscover } from "react-icons/fa";
+import { CreditCard as DefaultCardIcon } from "lucide-react";
 import {
     Card,
     CardContent,
@@ -253,18 +256,20 @@ export default function CardsPage() {
         setIsDialogOpen(true);
     };
 
-    const getBrandLogo = (brand: string) => {
+    const getBrandIcon = (brand: string) => {
+        const iconProps = { className: "h-8 w-8 text-primary" };
+        
         switch (brand) {
             case 'visa':
-                return '💳';
+                return <FaCcVisa {...iconProps} />;
             case 'mastercard':
-                return '💳';
+                return <FaCcMastercard {...iconProps} />;
             case 'amex':
-                return '💳';
+                return <FaCcAmex {...iconProps} />;
             case 'discover':
-                return '💳';
+                return <FaCcDiscover {...iconProps} />;
             default:
-                return '💳';
+                return <DefaultCardIcon {...iconProps} />;
         }
     };
 
@@ -293,65 +298,72 @@ export default function CardsPage() {
                             Gestiona tus tarjetas de crédito y débito
                         </p>
                     </div>
-                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button onClick={resetForm}>
-                                <Plus className="h-4 w-4 mr-2" />
-                                Agregar Tarjeta
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
-                            <DialogHeader>
-                                <DialogTitle>
+                    <Button onClick={() => { resetForm(); setIsDialogOpen(true); }}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Agregar Tarjeta
+                    </Button>
+
+                    {/* Compact Slide-up Dialog */}
+                    <Slide direction="up" in={isDialogOpen} mountOnEnter unmountOnExit>
+                        <div className="fixed inset-x-4 bottom-4 top-32 z-50 bg-background flex flex-col rounded-3xl shadow-2xl max-w-md mx-auto border">
+                            {/* Header with close button */}
+                            <div className="flex items-center justify-between p-4 border-b">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setIsDialogOpen(false)}
+                                    className="text-primary"
+                                >
+                                    Cancelar
+                                </Button>
+                                <h1 className="text-lg font-semibold">
                                     {editingCard ? 'Editar Tarjeta' : 'Nueva Tarjeta'}
-                                </DialogTitle>
-                                <DialogDescription>
-                                    {editingCard 
-                                        ? 'Modifica los datos de tu tarjeta.'
-                                        : 'Agrega una nueva tarjeta a tu billetera digital.'
-                                    }
-                                </DialogDescription>
-                            </DialogHeader>
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">Nombre de la tarjeta</Label>
+                                </h1>
+                                <div className="w-16"></div> {/* Spacer for centering */}
+                            </div>
+                            
+                            {/* Scrollable content */}
+                            <div className="flex-1 overflow-y-auto">
+                                <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                                <div className="space-y-3">
+                                    <Label htmlFor="name" className="text-sm font-medium text-foreground">Nombre de la tarjeta</Label>
                                     <Input
                                         id="name"
                                         placeholder="Ej: Tarjeta Principal"
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         required
+                                        className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="type">Tipo</Label>
+                                    <div className="space-y-3">
+                                        <Label htmlFor="type" className="text-sm font-medium text-foreground">Tipo</Label>
                                         <Select
                                             value={formData.card_type}
                                             onValueChange={(value: "credit" | "debit") => 
                                                 setFormData({ ...formData, card_type: value })
                                             }
                                         >
-                                            <SelectTrigger>
+                                            <SelectTrigger className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background">
                                                 <SelectValue />
                                             </SelectTrigger>
-                                            <SelectContent>
+                                            <SelectContent className="rounded-xl">
                                                 <SelectItem value="credit">Crédito</SelectItem>
                                                 <SelectItem value="debit">Débito</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="brand">Marca</Label>
+                                    <div className="space-y-3">
+                                        <Label htmlFor="brand" className="text-sm font-medium text-foreground">Marca</Label>
                                         <Select
                                             value={formData.brand}
                                             onValueChange={(value) => setFormData({ ...formData, brand: value as "visa" | "mastercard" | "amex" | "discover" | "other" })}
                                         >
-                                            <SelectTrigger>
+                                            <SelectTrigger className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background">
                                                 <SelectValue />
                                             </SelectTrigger>
-                                            <SelectContent>
+                                            <SelectContent className="rounded-xl">
                                                 {CARD_BRANDS.map((brand) => (
                                                     <SelectItem key={brand.value} value={brand.value}>
                                                         {brand.label}
@@ -362,8 +374,8 @@ export default function CardsPage() {
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="last_four_digits">Últimos 4 dígitos</Label>
+                                <div className="space-y-3">
+                                    <Label htmlFor="last_four_digits" className="text-sm font-medium text-foreground">Últimos 4 dígitos</Label>
                                     <Input
                                         id="last_four_digits"
                                         placeholder="1234"
@@ -374,20 +386,21 @@ export default function CardsPage() {
                                             setFormData({ ...formData, last_four_digits: value });
                                         }}
                                         required
+                                        className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
                                     />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label>Color de la tarjeta</Label>
-                                    <div className="flex space-x-2">
+                                <div className="space-y-3">
+                                    <Label className="text-sm font-medium text-foreground">Color de la tarjeta</Label>
+                                    <div className="flex space-x-3 justify-center">
                                         {CARD_COLORS.map((color) => (
                                             <button
                                                 key={color}
                                                 type="button"
-                                                className={`w-8 h-8 rounded-full border-2 ${
+                                                className={`w-10 h-10 rounded-full border-3 transition-all ${
                                                     formData.color === color 
-                                                        ? 'border-primary' 
-                                                        : 'border-transparent'
+                                                        ? 'border-primary scale-110 shadow-lg' 
+                                                        : 'border-muted-foreground/20'
                                                 }`}
                                                 style={{ backgroundColor: color }}
                                                 onClick={() => setFormData({ ...formData, color })}
@@ -396,11 +409,16 @@ export default function CardsPage() {
                                     </div>
                                 </div>
 
-                                <DialogFooter>
-                                    <Button type="submit" disabled={isSubmitting}>
+                                {/* iPhone-style submit button */}
+                                <div className="pt-4 pb-6">
+                                    <Button 
+                                        type="submit" 
+                                        disabled={isSubmitting}
+                                        className="w-full h-14 rounded-2xl text-base font-semibold bg-primary hover:bg-primary/90 shadow-lg transition-all"
+                                    >
                                         {isSubmitting ? (
                                             <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                                                 {editingCard ? 'Actualizando...' : 'Agregando...'}
                                             </>
                                         ) : (
@@ -409,10 +427,11 @@ export default function CardsPage() {
                                             </>
                                         )}
                                     </Button>
-                                </DialogFooter>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+                                </div>
+                                </form>
+                            </div>
+                        </div>
+                    </Slide>
                 </div>
 
                 {cards.length === 0 ? (
@@ -444,14 +463,11 @@ export default function CardsPage() {
                                 />
                                 <CardHeader className="relative">
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-2">
-                                            <span className="text-2xl">{getBrandLogo(card.brand)}</span>
-                                            <div>
-                                                <CardTitle className="text-lg">{card.name}</CardTitle>
-                                                <p className="text-sm text-muted-foreground capitalize">
-                                                    {card.brand} • {card.card_type === 'credit' ? 'Crédito' : 'Débito'}
-                                                </p>
-                                            </div>
+                                        <div>
+                                            <CardTitle className="text-lg">{card.name}</CardTitle>
+                                            <p className="text-sm text-muted-foreground capitalize">
+                                                {card.brand} • {card.card_type === 'credit' ? 'Crédito' : 'Débito'}
+                                            </p>
                                         </div>
                                         <Badge 
                                             variant={card.is_active ? "default" : "secondary"}
@@ -467,7 +483,8 @@ export default function CardsPage() {
                                             •••• •••• •••• {card.last_four_digits}
                                         </div>
                                     </div>
-                                    <div className="flex space-x-2">
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex space-x-2">
                                         <Button
                                             variant="ghost"
                                             size="sm"
@@ -503,6 +520,10 @@ export default function CardsPage() {
                                                 <Trash2 className="h-4 w-4" />
                                             )}
                                         </Button>
+                                        </div>
+                                        <div className="opacity-80">
+                                            {getBrandIcon(card.brand)}
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>

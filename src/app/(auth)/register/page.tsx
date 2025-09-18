@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,6 +104,15 @@ export default function RegisterPage() {
         <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-primary/5">
             <div className="max-w-md w-full space-y-8">
                 <div className="text-center">
+                    <div className="flex justify-center mb-6">
+                        <Image 
+                            src="/logo.png" 
+                            alt="Kipo Logo" 
+                            width={64}
+                            height={64}
+                            className="h-16 w-auto"
+                        />
+                    </div>
                     <h1 className="text-3xl font-bold tracking-tight text-primary">
                         Únete a Kipo
                     </h1>

@@ -35,6 +35,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiKeyResponse, CreateApiKeyResponse } from "@/types";
 import Link from "next/link";
+import WhatsAppLinkCard from "./_components/WhatsAppLinkCard";
 
 export default function SettingsPage() {
     const [apiKeys, setApiKeys] = useState<ApiKeyResponse[]>([]);
@@ -339,6 +340,9 @@ export default function SettingsPage() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* WhatsApp section */}
+                <WhatsAppLinkCard />
 
                 {/* Token Display Dialog */}
                 <Dialog open={isTokenDialogOpen} onOpenChange={setIsTokenDialogOpen}>

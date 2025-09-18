@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Slide } from "@mui/material";
 import {
     Card,
     CardContent,
@@ -16,6 +17,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     Dialog,
     DialogContent,
@@ -35,6 +37,9 @@ import {
     Calendar,
     DollarSign,
     Loader2,
+    Search,
+    Filter,
+    X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -69,9 +74,21 @@ export default function TransactionsPage() {
     const [user, setUser] = useState<{ id: string } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [actionLoading, setActionLoading] = useState<{ [key: string]: boolean }>({});
+    
+    // Estados para filtros
+    const [activeTab, setActiveTab] = useState<"all" | "income" | "expense">("all");
+    const [filters, setFilters] = useState({
+        search: "",
+        category: "all",
+        cardId: "all",
+        minAmount: "",
+        maxAmount: ""
+    });
+    
     const supabase = createClient();
 
     const [formData, setFormData] = useState<CreateTransactionInput>({
+        title: "",
         type: "expense",
         amount: 0,
         category: "",
@@ -220,6 +237,7 @@ export default function TransactionsPage() {
 
     const resetForm = () => {
         setFormData({
+            title: "",
             type: "expense",
             amount: 0,
             category: "",
@@ -236,6 +254,7 @@ export default function TransactionsPage() {
     const openEditDialog = (transaction: Transaction) => {
         setEditingTransaction(transaction);
         setFormData({
+            title: (transaction as any).title || "",
             type: transaction.type as "income" | "expense",
             amount: transaction.amount,
             category: transaction.category,
@@ -258,6 +277,44 @@ export default function TransactionsPage() {
 
     const getAvailableCategories = () => {
         return formData.type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+    };
+
+    // Función para filtrar transacciones
+    const filteredTransactions = transactions.filter(transaction => {
+        // Filtro por pestaña activa
+        if (activeTab === "income" && transaction.type !== "income") return false;
+        if (activeTab === "expense" && transaction.type !== "expense") return false;
+        
+        // Filtro por búsqueda
+        if (filters.search && !transaction.description?.toLowerCase().includes(filters.search.toLowerCase()) && 
+            !transaction.category.toLowerCase().includes(filters.search.toLowerCase())) return false;
+        
+        // Filtro por categoría
+        if (filters.category && filters.category !== "all" && transaction.category !== filters.category) return false;
+        
+        // Filtro por tarjeta
+        if (filters.cardId && filters.cardId !== "all" && transaction.card_id !== filters.cardId) return false;
+        
+        // Filtro por rango de monto
+        if (filters.minAmount && transaction.amount < parseFloat(filters.minAmount)) return false;
+        if (filters.maxAmount && transaction.amount > parseFloat(filters.maxAmount)) return false;
+        
+        return true;
+    });
+
+    // Separar transacciones por tipo
+    const incomeTransactions = filteredTransactions.filter(t => t.type === "income");
+    const expenseTransactions = filteredTransactions.filter(t => t.type === "expense");
+
+    // Función para limpiar filtros
+    const clearFilters = () => {
+        setFilters({
+            search: "",
+            category: "all",
+            cardId: "all",
+            minAmount: "",
+            maxAmount: ""
+        });
     };
 
     if (loading || !user) {
@@ -285,46 +342,63 @@ export default function TransactionsPage() {
                             Gestiona tus ingresos y gastos
                         </p>
                     </div>
-                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button onClick={resetForm}>
-                                <Plus className="h-4 w-4 mr-2" />
-                                Nueva Transacción
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
-                            <DialogHeader>
-                                <DialogTitle>
+                    <Button onClick={() => { resetForm(); setIsDialogOpen(true); }}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nueva Transacción
+                    </Button>
+
+                    {/* Compact Slide-up Dialog */}
+                    <Slide direction="up" in={isDialogOpen} mountOnEnter unmountOnExit>
+                        <div className="fixed inset-x-4 bottom-4 top-32 z-50 bg-background flex flex-col rounded-3xl shadow-2xl max-w-md mx-auto border">
+                            {/* Header with close button */}
+                            <div className="flex items-center justify-between p-4 border-b">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setIsDialogOpen(false)}
+                                    className="text-primary"
+                                >
+                                    Cancelar
+                                </Button>
+                                <h1 className="text-lg font-semibold">
                                     {editingTransaction ? 'Editar Transacción' : 'Nueva Transacción'}
-                                </DialogTitle>
-                                <DialogDescription>
-                                    {editingTransaction 
-                                        ? 'Modifica los datos de tu transacción.'
-                                        : 'Agrega una nueva transacción a tu registro financiero.'
-                                    }
-                                </DialogDescription>
-                            </DialogHeader>
-                            <form onSubmit={handleSubmit} className="space-y-4">
+                                </h1>
+                                <div className="w-16"></div> {/* Spacer for centering */}
+                            </div>
+                            {/* Scrollable content */}
+                            <div className="flex-1 overflow-y-auto">
+                                <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                                <div className="space-y-3">
+                                    <Label htmlFor="title" className="text-sm font-medium text-foreground">Título</Label>
+                                    <Input
+                                        id="title"
+                                        placeholder="Ej: Almuerzo, Café, Salario..."
+                                        value={formData.title}
+                                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                        required
+                                        className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
+                                    />
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="type">Tipo</Label>
+                                    <div className="space-y-3">
+                                        <Label htmlFor="type" className="text-sm font-medium text-foreground">Tipo</Label>
                                         <Select
                                             value={formData.type}
                                             onValueChange={(value: "income" | "expense") => 
                                                 setFormData({ ...formData, type: value, category: "" })
                                             }
                                         >
-                                            <SelectTrigger>
+                                            <SelectTrigger className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background">
                                                 <SelectValue />
                                             </SelectTrigger>
-                                            <SelectContent>
+                                            <SelectContent className="rounded-xl">
                                                 <SelectItem value="expense">Gasto</SelectItem>
                                                 <SelectItem value="income">Ingreso</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="amount">Monto</Label>
+                                    <div className="space-y-3">
+                                        <Label htmlFor="amount" className="text-sm font-medium text-foreground">Monto</Label>
                                         <Input
                                             id="amount"
                                             type="number"
@@ -336,20 +410,21 @@ export default function TransactionsPage() {
                                                 amount: parseFloat(e.target.value) || 0 
                                             })}
                                             required
+                                            className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
                                         />
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="category">Categoría</Label>
+                                <div className="space-y-3">
+                                    <Label htmlFor="category" className="text-sm font-medium text-foreground">Categoría</Label>
                                     <Select
                                         value={formData.category}
                                         onValueChange={(value) => setFormData({ ...formData, category: value })}
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background">
                                             <SelectValue placeholder="Selecciona una categoría" />
                                         </SelectTrigger>
-                                        <SelectContent>
+                                        <SelectContent className="rounded-xl">
                                             {getAvailableCategories().map((category) => (
                                                 <SelectItem key={category} value={category}>
                                                     {category}
@@ -359,29 +434,31 @@ export default function TransactionsPage() {
                                     </Select>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="description">Descripción</Label>
+                                <div className="space-y-3">
+                                    <Label htmlFor="description" className="text-sm font-medium text-foreground">Descripción</Label>
                                     <Textarea
                                         id="description"
                                         placeholder="Descripción opcional..."
                                         value={formData.description}
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        className="min-h-[80px] rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors resize-none"
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="date">Fecha</Label>
+                                    <div className="space-y-3">
+                                        <Label htmlFor="date" className="text-sm font-medium text-foreground">Fecha</Label>
                                         <Input
                                             id="date"
                                             type="date"
                                             value={formData.transaction_date}
                                             onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
                                             required
+                                            className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="card">Tarjeta (opcional)</Label>
+                                    <div className="space-y-3">
+                                        <Label htmlFor="card" className="text-sm font-medium text-foreground">Tarjeta (opcional)</Label>
                                         <Select
                                             value={formData.card_id || "none"}
                                             onValueChange={(value) => setFormData({ 
@@ -389,10 +466,10 @@ export default function TransactionsPage() {
                                                 card_id: value === "none" ? undefined : value 
                                             })}
                                         >
-                                            <SelectTrigger>
+                                            <SelectTrigger className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background">
                                                 <SelectValue placeholder="Sin tarjeta" />
                                             </SelectTrigger>
-                                            <SelectContent>
+                                            <SelectContent className="rounded-xl">
                                                 <SelectItem value="none">Sin tarjeta</SelectItem>
                                                 {cards.map((card) => (
                                                     <SelectItem key={card.id} value={card.id}>
@@ -404,11 +481,16 @@ export default function TransactionsPage() {
                                     </div>
                                 </div>
 
-                                <DialogFooter>
-                                    <Button type="submit" disabled={isSubmitting}>
+                                {/* iPhone-style submit button */}
+                                <div className="pt-4 pb-6">
+                                    <Button 
+                                        type="submit" 
+                                        disabled={isSubmitting}
+                                        className="w-full h-14 rounded-2xl text-base font-semibold bg-primary hover:bg-primary/90 shadow-lg transition-all"
+                                    >
                                         {isSubmitting ? (
                                             <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                                                 {editingTransaction ? 'Actualizando...' : 'Creando...'}
                                             </>
                                         ) : (
@@ -417,29 +499,129 @@ export default function TransactionsPage() {
                                             </>
                                         )}
                                     </Button>
-                                </DialogFooter>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+                                </div>
+                                </form>
+                            </div>
+                        </div>
+                    </Slide>
                 </div>
 
-                {transactions.length === 0 ? (
-                    <Card className="text-center py-12">
-                        <CardContent>
-                            <DollarSign className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                            <h3 className="text-lg font-medium mb-2">No hay transacciones</h3>
-                            <p className="text-muted-foreground mb-6">
-                                Comienza agregando tu primera transacción
-                            </p>
-                            <Button onClick={() => setIsDialogOpen(true)}>
-                                <Plus className="h-4 w-4 mr-2" />
-                                Nueva Transacción
-                            </Button>
-                        </CardContent>
-                    </Card>
-                ) : (
+                {/* Filtros */}
+                <Card className="p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                            <Filter className="h-5 w-5" />
+                            Filtros
+                        </h3>
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={clearFilters}
+                            className="text-xs"
+                        >
+                            <X className="h-4 w-4 mr-1" />
+                            Limpiar
+                        </Button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                        {/* Búsqueda */}
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Buscar..."
+                                value={filters.search}
+                                onChange={(e) => setFilters({...filters, search: e.target.value})}
+                                className="pl-10"
+                            />
+                        </div>
+                        
+                        {/* Categoría */}
+                        <Select
+                            value={filters.category}
+                            onValueChange={(value) => setFilters({...filters, category: value})}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Categoría" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todas</SelectItem>
+                                {[...new Set([...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES])].map((category) => (
+                                    <SelectItem key={category} value={category}>
+                                        {category}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        
+                        {/* Tarjeta */}
+                        <Select
+                            value={filters.cardId}
+                            onValueChange={(value) => setFilters({...filters, cardId: value})}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Tarjeta" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todas</SelectItem>
+                                {cards.map((card) => (
+                                    <SelectItem key={card.id} value={card.id}>
+                                        {card.name} ****{card.last_four_digits}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        
+                        {/* Monto mínimo */}
+                        <Input
+                            type="number"
+                            placeholder="Monto mín."
+                            value={filters.minAmount}
+                            onChange={(e) => setFilters({...filters, minAmount: e.target.value})}
+                        />
+                        
+                        {/* Monto máximo */}
+                        <Input
+                            type="number"
+                            placeholder="Monto máx."
+                            value={filters.maxAmount}
+                            onChange={(e) => setFilters({...filters, maxAmount: e.target.value})}
+                        />
+                    </div>
+                </Card>
+
+                {/* Pestañas y Transacciones */}
+                <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "all" | "income" | "expense")}>
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="all">
+                            Todas ({filteredTransactions.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="income" className="text-green-600">
+                            Ingresos ({incomeTransactions.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="expense" className="text-red-600">
+                            Egresos ({expenseTransactions.length})
+                        </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="all" className="space-y-4">
+                        {filteredTransactions.length === 0 ? (
+                            <Card className="text-center py-12">
+                                <CardContent>
+                                    <DollarSign className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                                    <h3 className="text-lg font-medium mb-2">No hay transacciones</h3>
+                                    <p className="text-muted-foreground mb-6">
+                                        {transactions.length === 0 ? "Comienza agregando tu primera transacción" : "No se encontraron transacciones con los filtros aplicados"}
+                                    </p>
+                                    <Button onClick={() => setIsDialogOpen(true)}>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Nueva Transacción
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        ) : (
                     <div className="space-y-4">
-                        {transactions.map((transaction) => (
+                        {filteredTransactions.map((transaction) => (
                             <Card key={transaction.id} className="hover:shadow-md transition-shadow">
                                 <CardContent className="p-4">
                                     <div className="flex items-center justify-between">
@@ -456,12 +638,11 @@ export default function TransactionsPage() {
                                                 )}
                                             </div>
                                             <div>
-                                                <h3 className="font-medium">{transaction.category}</h3>
-                                                {transaction.description && (
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {transaction.description}
-                                                    </p>
-                                                )}
+                                                <h3 className="font-medium">{(transaction as any).title || transaction.category}</h3>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {transaction.category}
+                                                    {transaction.description && ` • ${transaction.description}`}
+                                                </p>
                                                 <div className="flex items-center space-x-2 mt-1">
                                                     <Calendar className="h-3 w-3 text-muted-foreground" />
                                                     <span className="text-xs text-muted-foreground">
@@ -522,7 +703,171 @@ export default function TransactionsPage() {
                             </Card>
                         ))}
                     </div>
-                )}
+                        )}
+                    </TabsContent>
+
+                    <TabsContent value="income" className="space-y-4">
+                        {incomeTransactions.length === 0 ? (
+                            <Card className="text-center py-12">
+                                <CardContent>
+                                    <TrendingUp className="h-12 w-12 mx-auto text-green-500 mb-4" />
+                                    <h3 className="text-lg font-medium mb-2">No hay ingresos</h3>
+                                    <p className="text-muted-foreground mb-6">
+                                        {transactions.filter(t => t.type === "income").length === 0 ? "Agrega tu primer ingreso" : "No se encontraron ingresos con los filtros aplicados"}
+                                    </p>
+                                    <Button onClick={() => { setFormData({...formData, type: "income"}); setIsDialogOpen(true); }}>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Nuevo Ingreso
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <div className="space-y-4">
+                                {incomeTransactions.map((transaction) => (
+                                    <Card key={transaction.id} className="hover:shadow-md transition-shadow border-l-4 border-l-green-500">
+                                        <CardContent className="p-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center space-x-4">
+                                                    <div className="p-2 rounded-full bg-green-100 text-green-600">
+                                                        <TrendingUp className="h-4 w-4" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-medium">{transaction.description || transaction.category}</h3>
+                                                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                                                            <span>{transaction.category}</span>
+                                                            <span>•</span>
+                                                            <span>{new Date(transaction.transaction_date).toLocaleDateString()}</span>
+                                                            {transaction.cards && (
+                                                                <>
+                                                                    <span>•</span>
+                                                                    <span>{transaction.cards.name} ****{transaction.cards.last_four_digits}</span>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                        {transaction.description && (
+                                                            <p className="text-sm text-muted-foreground mt-1">{transaction.description}</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center space-x-4">
+                                                    <div className="text-right">
+                                                        <div className="font-semibold text-green-600">
+                                                            +{formatCurrency(transaction.amount)}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex space-x-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => openEditDialog(transaction)}
+                                                            disabled={Object.values(actionLoading).some(loading => loading)}
+                                                        >
+                                                            <Edit className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleDelete(transaction.id)}
+                                                            className="text-destructive hover:text-destructive"
+                                                            disabled={actionLoading[`delete-${transaction.id}`] || Object.values(actionLoading).some(loading => loading)}
+                                                        >
+                                                            {actionLoading[`delete-${transaction.id}`] ? (
+                                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                            ) : (
+                                                                <Trash2 className="h-4 w-4" />
+                                                            )}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+                    </TabsContent>
+
+                    <TabsContent value="expense" className="space-y-4">
+                        {expenseTransactions.length === 0 ? (
+                            <Card className="text-center py-12">
+                                <CardContent>
+                                    <TrendingDown className="h-12 w-12 mx-auto text-red-500 mb-4" />
+                                    <h3 className="text-lg font-medium mb-2">No hay egresos</h3>
+                                    <p className="text-muted-foreground mb-6">
+                                        {transactions.filter(t => t.type === "expense").length === 0 ? "Agrega tu primer egreso" : "No se encontraron egresos con los filtros aplicados"}
+                                    </p>
+                                    <Button onClick={() => { setFormData({...formData, type: "expense"}); setIsDialogOpen(true); }}>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Nuevo Egreso
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <div className="space-y-4">
+                                {expenseTransactions.map((transaction) => (
+                                    <Card key={transaction.id} className="hover:shadow-md transition-shadow border-l-4 border-l-red-500">
+                                        <CardContent className="p-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center space-x-4">
+                                                    <div className="p-2 rounded-full bg-red-100 text-red-600">
+                                                        <TrendingDown className="h-4 w-4" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-medium">{transaction.description || transaction.category}</h3>
+                                                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                                                            <span>{transaction.category}</span>
+                                                            <span>•</span>
+                                                            <span>{new Date(transaction.transaction_date).toLocaleDateString()}</span>
+                                                            {transaction.cards && (
+                                                                <>
+                                                                    <span>•</span>
+                                                                    <span>{transaction.cards.name} ****{transaction.cards.last_four_digits}</span>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                        {transaction.description && (
+                                                            <p className="text-sm text-muted-foreground mt-1">{transaction.description}</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center space-x-4">
+                                                    <div className="text-right">
+                                                        <div className="font-semibold text-red-600">
+                                                            -{formatCurrency(transaction.amount)}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex space-x-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => openEditDialog(transaction)}
+                                                            disabled={Object.values(actionLoading).some(loading => loading)}
+                                                        >
+                                                            <Edit className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleDelete(transaction.id)}
+                                                            className="text-destructive hover:text-destructive"
+                                                            disabled={actionLoading[`delete-${transaction.id}`] || Object.values(actionLoading).some(loading => loading)}
+                                                        >
+                                                            {actionLoading[`delete-${transaction.id}`] ? (
+                                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                            ) : (
+                                                                <Trash2 className="h-4 w-4" />
+                                                            )}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+                    </TabsContent>
+                </Tabs>
             </div>
         </div>
     );

@@ -18,6 +18,9 @@ export const metadata: Metadata = {
     },
     description:
         "Kipo te ayuda a controlar gastos, establecer metas de ahorro y recibir recomendaciones inteligentes basadas en IA. Gestiona tu dinero de forma sencilla, segura y visual.",
+    icons: {
+        icon: "/favicon.png",
+    },
     keywords: [
         "finanzas personales",
         "ahorro",

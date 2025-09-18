@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
@@ -35,7 +36,16 @@ export default function Home() {
                 }`}
             >
                 <div className="container mx-auto flex h-16 items-center justify-between px-4">
-                    <div className="text-2xl font-bold text-primary">Kipo</div>
+                    <div className="flex items-center gap-2">
+                        <Image 
+                            src="/logo.png" 
+                            alt="Kipo Logo" 
+                            width={32}
+                            height={32}
+                            className="h-8 w-auto"
+                        />
+                        <div className="text-2xl font-bold text-primary">Kipo</div>
+                    </div>
                     <div className="flex space-x-3">
                         <Link href="/login">
                             <Button variant="ghost" className="text-sm">

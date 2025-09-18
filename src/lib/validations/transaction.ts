@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const createTransactionSchema = z.object({
+  title: z.string().min(1, "El título es requerido"),
   type: z.enum(["income", "expense"], {
     message: "El tipo de transacción es requerido",
   }),

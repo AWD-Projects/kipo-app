@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
     LayoutDashboard,
@@ -75,7 +76,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <div className="flex flex-col h-screen bg-background">
             <header className="flex items-center justify-between p-4 bg-card border-b">
                 <Link href="/" className="flex items-center gap-2">
-                    <div className="text-2xl font-bold text-primary">Kipo</div>
+                    <Image 
+                        src="/logo.png" 
+                        alt="Kipo Logo" 
+                        width={32}
+                        height={32}
+                        className="h-8 w-auto"
+                    />
+                    <div className="text-xl font-bold text-primary">Kipo</div>
                 </Link>
                 <Button
                     variant="ghost"
@@ -105,13 +113,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                             </Link>
                         ))}
                     </nav>
-                    <div className="p-4">
+                    <div className="p-2">
                         <Card>
-                            <div className="flex items-center p-4">
-                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mr-3">
-                                    <span className="text-primary font-medium">
-                                        {user?.email?.charAt(0).toUpperCase()}
-                                    </span>
+                            <div className="flex items-center p-2">
+                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mr-3 overflow-hidden">
+                                    <Image 
+                                        src="/icons/avatar/kipo.png" 
+                                        alt="User Avatar" 
+                                        width={32}
+                                        height={32}
+                                        className="w-8 h-8 object-contain"
+                                    />
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="font-medium text-sm">

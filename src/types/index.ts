@@ -42,3 +42,90 @@ export interface CreateApiKeyResponse {
   token: string // This will be "keyId.plainToken"
   api_key: ApiKeyResponse
 }
+
+// WhatsApp types - defined manually since table was created separately
+export interface WhatsAppLink {
+  id: string
+  user_id: string
+  phone_e164: string
+  provider: 'twilio' | 'meta'
+  status: 'pending' | 'verified' | 'revoked'
+  verification_code: string | null
+  code_expires_at: string | null
+  wa_user_id: string | null
+  wa_profile_name: string | null
+  api_key_id: string | null
+  linked_at: string | null
+  last_seen_at: string | null
+  last_message_sid: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface WhatsAppLinkInsert {
+  id?: string
+  user_id: string
+  phone_e164: string
+  provider?: 'twilio' | 'meta'
+  status?: 'pending' | 'verified' | 'revoked'
+  verification_code?: string | null
+  code_expires_at?: string | null
+  wa_user_id?: string | null
+  wa_profile_name?: string | null
+  api_key_id?: string | null
+  linked_at?: string | null
+  last_seen_at?: string | null
+  last_message_sid?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+export interface WhatsAppLinkUpdate {
+  id?: string
+  user_id?: string
+  phone_e164?: string
+  provider?: 'twilio' | 'meta'
+  status?: 'pending' | 'verified' | 'revoked'
+  verification_code?: string | null
+  code_expires_at?: string | null
+  wa_user_id?: string | null
+  wa_profile_name?: string | null
+  api_key_id?: string | null
+  linked_at?: string | null
+  last_seen_at?: string | null
+  last_message_sid?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+export type WhatsAppProvider = 'twilio' | 'meta'
+export type WhatsAppStatus = 'pending' | 'verified' | 'revoked'
+
+export interface WhatsAppLinkInitRequest {
+  phone_e164: string
+}
+
+export interface WhatsAppLinkInitResponse {
+  status: WhatsAppStatus
+  phone_e164: string
+  verification_code: string
+  code_expires_at: string
+}
+
+export interface WhatsAppStatusResponse {
+  status: WhatsAppStatus
+  phone_e164: string | null
+  last_seen_at: string | null
+  wa_profile_name: string | null
+  linked_at: string | null
+}
+
+export interface TwilioWebhookPayload {
+  From: string
+  To: string
+  Body: string
+  MessageSid: string
+  AccountSid: string
+  ProfileName?: string
+  WaId?: string
+}

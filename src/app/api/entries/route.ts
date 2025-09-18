@@ -8,6 +8,7 @@ const createTransactionSchema = z.object({
   type: z.enum(['income', 'expense'], {
     message: 'El tipo es requerido',
   }),
+  title: z.string().min(1, 'El título es requerido'),
   amount: z.coerce
     .number({ message: 'El monto es requerido' })
     .positive('El monto debe ser mayor a 0'),
@@ -82,6 +83,7 @@ export async function POST(request: NextRequest) {
       .from('transactions')
       .insert({
         user_id: apiKey.user_id,
+        title: transactionData.title,
         type: transactionData.type,
         amount: transactionData.amount,
         category: transactionData.category,
