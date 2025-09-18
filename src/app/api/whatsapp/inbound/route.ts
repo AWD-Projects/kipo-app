@@ -1,8 +1,9 @@
 // src/app/api/whatsapp/inbound/route.ts
 export const runtime = "nodejs"; // evita Edge; necesitamos req.text()
+export const dynamic = "force-dynamic"; // Asegura que se ejecute en tiempo de solicitud
 
 import { NextRequest, NextResponse } from "next/server";
-import twilio, { validateRequest } from "twilio";
+import { validateRequest } from "twilio";
 import { createClient } from "@supabase/supabase-js";
 
 // --- ADMIN client (service role) ----
