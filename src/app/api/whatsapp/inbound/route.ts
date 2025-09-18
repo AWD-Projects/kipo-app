@@ -3,8 +3,8 @@ export const runtime = "nodejs"; // evita Edge; necesitamos req.text()
 export const dynamic = "force-dynamic"; // Asegura que se ejecute en tiempo de solicitud
 
 import { NextRequest, NextResponse } from "next/server";
-import { validateRequest } from "twilio";
 import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
 
 // --- ADMIN client (service role) ----
 const supabaseAdmin = createClient(
@@ -12,6 +12,20 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!, // server-only
   { auth: { persistSession: false } }
 );
+
+// Custom Twilio signature validation (to avoid import issues)
+function validateTwilioSignature(authToken: string, signature: string, url: string, params: Record<string, string>): boolean {
+  try {
+    // Create the expected signature
+    const sortedParams = Object.keys(params).sort().map(key => `${key}${params[key]}`).join('');
+    const data = url + sortedParams;
+    const expectedSignature = crypto.createHmac('sha1', authToken).update(data, 'utf-8').digest('base64');
+    return signature === expectedSignature;
+  } catch (error) {
+    console.error('Signature validation error:', error);
+    return false;
+  }
+}
 
 // Normaliza "whatsapp:+52..." -> "+52..."
 function toE164Strict(s: string) {
@@ -39,7 +53,7 @@ export async function POST(req: NextRequest) {
 
   // 3) Verificar firma (permite bypass temporal si pones TWILIO_WEBHOOK_SKIP_VERIFY=1)
   if (process.env.TWILIO_WEBHOOK_SKIP_VERIFY !== "1") {
-    const ok = validateRequest(
+    const ok = validateTwilioSignature(
       process.env.TWILIO_AUTH_TOKEN as string,
       signature,
       fullUrl,
