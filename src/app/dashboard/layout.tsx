@@ -83,7 +83,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         height={32}
                         className="h-8 w-auto"
                     />
-                    <div className="text-xl font-bold text-primary">Kipo</div>
                 </Link>
                 <Button
                     variant="ghost"

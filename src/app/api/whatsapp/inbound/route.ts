@@ -5,6 +5,8 @@ export const dynamic = "force-dynamic"; // Asegura que se ejecute en tiempo de s
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
+import { extractTransaction } from "@/server/nlp";
+import { getUserNlpContext } from "@/lib/db/userContext";
 
 // --- ADMIN client (service role) ----
 const supabaseAdmin = createClient(
@@ -161,35 +163,49 @@ export async function POST(req: NextRequest) {
     return twiml("✅ Tu WhatsApp quedó vinculado. Ya puedes enviar: gasto 120 café");
   }
 
-  // 7) Comando de gasto: "gasto 120 café" 
-  const expenseMatch = body.match(/^gasto\s+(\d+(?:\.\d{2})?)\s+(.+)$/i);
-  if (expenseMatch) {
-    const amount = parseFloat(expenseMatch[1]);
-    const description = expenseMatch[2].trim();
-    
-    // Verificar que el número esté vinculado
-    const { data: verifiedLink } = await supabaseAdmin
-      .from("whatsapp_links")
-      .select("user_id")
-      .eq("phone_e164", from)
-      .eq("status", "verified")
-      .single();
+  // 7) Verificar que el número esté vinculado
+  const { data: verifiedLink } = await supabaseAdmin
+    .from("whatsapp_links")
+    .select("user_id")
+    .eq("phone_e164", from)
+    .eq("status", "verified")
+    .single();
 
-    if (!verifiedLink) {
-      return twiml("Para registrar gastos, primero vincula tu WhatsApp desde la web.");
+  if (!verifiedLink) {
+    return twiml("Para registrar gastos, primero vincula tu WhatsApp desde la web.");
+  }
+
+  // 8) Extraer transacción usando Claude
+  try {
+    console.log(`[NLP] Processing message from user ${verifiedLink.user_id}: "${body}"`);
+    
+    // Get user context for NLP
+    const nlpContext = await getUserNlpContext(verifiedLink.user_id);
+    
+    // Extract transaction using Claude
+    const extractedTx = await extractTransaction(body, nlpContext);
+    
+    if (!extractedTx) {
+      console.log(`[NLP] No transaction detected in message: "${body}"`);
+      return twiml('No entendí bien el monto/operación. Escribe algo como "gasté 120 café".');
     }
 
-    console.log(`[EXPENSE] user=${verifiedLink.user_id}, amount=${amount}, description=${description}`);
+    if (extractedTx.confidence < 0.75) {
+      console.log(`[NLP] Low confidence (${extractedTx.confidence}) for message: "${body}"`);
+      return twiml('No entendí bien el monto/operación. Escribe algo como "gasté 120 café".');
+    }
+
+    console.log(`[NLP] Extracted transaction:`, extractedTx);
     
-    // Insertar el gasto en la tabla de transacciones
+    // Insertar la transacción en la tabla
     const transactionData = {
       user_id: verifiedLink.user_id,
-      type: "expense",
-      amount: amount,
-      category: "WhatsApp", // Default category for WhatsApp expenses
-      description: description,
-      transaction_date: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
-      source: "web",
+      type: extractedTx.type,
+      amount: extractedTx.amount,
+      category: extractedTx.category || "Otros",
+      description: extractedTx.description,
+      transaction_date: extractedTx.transaction_date || new Date().toISOString().split('T')[0],
+      source: "web", // Use 'web' to match database constraints
       is_recurring: false,
       recurring_frequency: "none",
       tags: ["whatsapp"],
@@ -204,21 +220,24 @@ export async function POST(req: NextRequest) {
 
     if (transactionError) {
       console.error("Error creating transaction:", transactionError);
-      return twiml("❌ Error al registrar el gasto. Intenta de nuevo.");
+      return twiml("❌ Error al registrar la transacción. Intenta de nuevo.");
     }
 
-    console.log(`[EXPENSE] Transaction created:`, transaction);
+    console.log(`[NLP] Transaction created:`, transaction);
     
-    return twiml(`✅ Gasto registrado: $${amount} - ${description}`);
+    // Response based on transaction type
+    const responsePrefix = extractedTx.type === 'income' ? 'Ingreso registrado' : 'Gasto registrado';
+    return twiml(`✅ ${responsePrefix}: $${extractedTx.amount} — ${extractedTx.description}`);
+    
+  } catch (error) {
+    console.error("Error processing NLP extraction:", error);
+    return twiml("❌ Error al procesar el mensaje. Intenta de nuevo.");
+  } finally {
+    // Update last_seen_at for verified numbers
+    await supabaseAdmin
+      .from("whatsapp_links")
+      .update({ last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("phone_e164", from)
+      .eq("status", "verified");
   }
-
-  // 8) Mantén last_seen_at para números verificados
-  await supabaseAdmin
-    .from("whatsapp_links")
-    .update({ last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-    .eq("phone_e164", from)
-    .eq("status", "verified");
-
-  // 9) Mensaje por defecto
-  return twiml('Para registrar gastos envía: "gasto 120 café"\nPara vincular tu cuenta visita la web de Kipo.');
 }
