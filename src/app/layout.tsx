@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Quicksand } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -35,11 +35,15 @@ export const metadata: Metadata = {
         { name: "Amoxtli Web Developers", url: "https://www.amoxtli.tech" },
     ],
     creator: "Amoxtli Web Developers",
+};
+
+export const viewport: Viewport = {
+    width: "device-width",
+    initialScale: 1.0,
     themeColor: [
         { media: "(prefers-color-scheme: light)", color: "#ffffff" },
         { media: "(prefers-color-scheme: dark)", color: "#333333" },
     ],
-    viewport: "width=device-width, initial-scale=1.0",
 };
 
 export default function RootLayout({

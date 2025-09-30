@@ -5,6 +5,9 @@ import { Slide } from "@mui/material";
 import {
     Card,
     CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,10 +32,27 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
     Plus,
     TrendingUp,
     TrendingDown,
-    Edit,
+    Edit2,
     Trash2,
     Calendar,
     DollarSign,
@@ -40,17 +60,20 @@ import {
     Search,
     Filter,
     X,
+    Ellipsis,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Transaction, Card as CardType } from "@/types";
 import { toast } from "@/lib/toast";
+import { formatCurrency, parseCurrency } from "@/lib/format";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { useUser } from "@/hooks/useUser";
+import { LoadingState } from "@/components/ui/loading-state";
 
 type TransactionWithCard = Transaction & {
     cards?: {
         id: string;
         name: string;
-        last_four_digits: string;
         brand: string;
     } | null;
 };
@@ -66,15 +89,17 @@ const INCOME_CATEGORIES = [
 ];
 
 export default function TransactionsPage() {
+    const { user, supabase } = useUser();
     const [transactions, setTransactions] = useState<TransactionWithCard[]>([]);
     const [cards, setCards] = useState<CardType[]>([]);
     const [loading, setLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-    const [user, setUser] = useState<{ id: string } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [actionLoading, setActionLoading] = useState<{ [key: string]: boolean }>({});
-    
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
+
     // Estados para filtros
     const [activeTab, setActiveTab] = useState<"all" | "income" | "expense">("all");
     const [filters, setFilters] = useState({
@@ -84,8 +109,6 @@ export default function TransactionsPage() {
         minAmount: "",
         maxAmount: ""
     });
-    
-    const supabase = createClient();
 
     const [formData, setFormData] = useState<CreateTransactionInput>({
         title: "",
@@ -101,18 +124,13 @@ export default function TransactionsPage() {
     });
 
     useEffect(() => {
-        const getUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            setUser(user);
-            if (user) {
-                await Promise.all([
-                    loadTransactions(user.id),
-                    loadCards(user.id)
-                ]);
-            }
-        };
-        getUser();
-    }, [supabase.auth]);
+        if (user?.id) {
+            Promise.all([
+                loadTransactions(user.id),
+                loadCards(user.id)
+            ]).finally(() => setLoading(false));
+        }
+    }, [user?.id]);
 
     const loadTransactions = async (userId: string) => {
         try {
@@ -123,7 +141,6 @@ export default function TransactionsPage() {
                     cards (
                         id,
                         name,
-                        last_four_digits,
                         brand
                     )
                 `)
@@ -134,8 +151,7 @@ export default function TransactionsPage() {
             setTransactions(data || []);
         } catch (error) {
             console.error('Error loading transactions:', error);
-        } finally {
-            setLoading(false);
+            toast.error('Error al cargar las transacciones');
         }
     };
 
@@ -151,6 +167,7 @@ export default function TransactionsPage() {
             setCards(data || []);
         } catch (error) {
             console.error('Error loading cards:', error);
+            toast.error('Error al cargar las tarjetas');
         }
     };
 
@@ -208,14 +225,19 @@ export default function TransactionsPage() {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('¿Estás seguro de que quieres eliminar esta transacción?')) return;
+    const handleDeleteClick = (id: string) => {
+        setTransactionToDelete(id);
+        setDeleteDialogOpen(true);
+    };
 
-        const actionKey = `delete-${id}`;
+    const handleDelete = async () => {
+        if (!transactionToDelete) return;
+
+        const actionKey = `delete-${transactionToDelete}`;
         setActionLoading(prev => ({ ...prev, [actionKey]: true }));
 
         try {
-            const response = await fetch(`/api/transactions/${id}`, {
+            const response = await fetch(`/api/transactions/${transactionToDelete}`, {
                 method: 'DELETE',
             });
 
@@ -227,6 +249,8 @@ export default function TransactionsPage() {
             toast.success("Transacción eliminada: La transacción se ha eliminado correctamente.");
 
             if (user) await loadTransactions(user.id);
+            setDeleteDialogOpen(false);
+            setTransactionToDelete(null);
         } catch (error) {
             console.error('Error deleting transaction:', error);
             toast.error(`Error: ${error instanceof Error ? error.message : "No se pudo eliminar la transacción."}`);
@@ -268,12 +292,6 @@ export default function TransactionsPage() {
         setIsDialogOpen(true);
     };
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('es-MX', {
-            style: 'currency',
-            currency: 'MXN'
-        }).format(amount);
-    };
 
     const getAvailableCategories = () => {
         return formData.type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
@@ -332,19 +350,19 @@ export default function TransactionsPage() {
 
     return (
         <div className="kipo-dashboard-layout">
-            <div className="space-y-6">
-                <div className="flex items-center justify-between">
+            <div className="kipo-stack-lg">
+                {/* Page Header */}
+                <div className="kipo-section-header">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight text-primary">
-                            Transacciones
-                        </h1>
-                        <p className="text-muted-foreground">
+                        <h1 className="kipo-page-title">Transacciones</h1>
+                        <p className="kipo-page-description">
                             Gestiona tus ingresos y gastos
                         </p>
                     </div>
-                    <Button onClick={() => { resetForm(); setIsDialogOpen(true); }}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Nueva Transacción
+                    <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} size="sm" className="kipo-mobile-full">
+                        <Plus className="kipo-icon-sm mr-2" />
+                        <span className="hidden sm:inline">Nueva Transacción</span>
+                        <span className="sm:hidden">Nueva</span>
                     </Button>
 
                     {/* Compact Slide-up Dialog */}
@@ -399,15 +417,13 @@ export default function TransactionsPage() {
                                     </div>
                                     <div className="space-y-3">
                                         <Label htmlFor="amount" className="text-sm font-medium text-foreground">Monto</Label>
-                                        <Input
+                                        <CurrencyInput
                                             id="amount"
-                                            type="number"
-                                            step="0.01"
                                             placeholder="0.00"
-                                            value={formData.amount || ""}
-                                            onChange={(e) => setFormData({ 
-                                                ...formData, 
-                                                amount: parseFloat(e.target.value) || 0 
+                                            value={formData.amount}
+                                            onValueChange={(value) => setFormData({
+                                                ...formData,
+                                                amount: value
                                             })}
                                             required
                                             className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
@@ -473,7 +489,7 @@ export default function TransactionsPage() {
                                                 <SelectItem value="none">Sin tarjeta</SelectItem>
                                                 {cards.map((card) => (
                                                     <SelectItem key={card.id} value={card.id}>
-                                                        {card.name} ****{card.last_four_digits}
+                                                        {card.name}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -507,41 +523,25 @@ export default function TransactionsPage() {
                 </div>
 
                 {/* Filtros */}
-                <Card className="p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                            <Filter className="h-5 w-5" />
-                            Filtros
-                        </h3>
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={clearFilters}
-                            className="text-xs"
-                        >
-                            <X className="h-4 w-4 mr-1" />
-                            Limpiar
-                        </Button>
+                <div className="flex flex-col lg:flex-row gap-2 items-start lg:items-center">
+                    {/* Búsqueda */}
+                    <div className="relative w-full lg:flex-[2] min-w-0">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 kipo-icon-sm text-muted-foreground" />
+                        <Input
+                            placeholder="Buscar transacciones..."
+                            value={filters.search}
+                            onChange={(e) => setFilters({...filters, search: e.target.value})}
+                            className="pl-9 h-9"
+                        />
                     </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                        {/* Búsqueda */}
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Buscar..."
-                                value={filters.search}
-                                onChange={(e) => setFilters({...filters, search: e.target.value})}
-                                className="pl-10"
-                            />
-                        </div>
-                        
-                        {/* Categoría */}
+
+                    {/* Categoría */}
+                    <div className="w-full lg:flex-1 min-w-0">
                         <Select
                             value={filters.category}
                             onValueChange={(value) => setFilters({...filters, category: value})}
                         >
-                            <SelectTrigger>
+                            <SelectTrigger size="sm">
                                 <SelectValue placeholder="Categoría" />
                             </SelectTrigger>
                             <SelectContent>
@@ -553,42 +553,59 @@ export default function TransactionsPage() {
                                 ))}
                             </SelectContent>
                         </Select>
-                        
-                        {/* Tarjeta */}
+                    </div>
+
+                    {/* Tarjeta */}
+                    <div className="w-full lg:flex-1 min-w-0">
                         <Select
                             value={filters.cardId}
                             onValueChange={(value) => setFilters({...filters, cardId: value})}
                         >
-                            <SelectTrigger>
+                            <SelectTrigger size="sm">
                                 <SelectValue placeholder="Tarjeta" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Todas</SelectItem>
                                 {cards.map((card) => (
                                     <SelectItem key={card.id} value={card.id}>
-                                        {card.name} ****{card.last_four_digits}
+                                        {card.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
-                        
-                        {/* Monto mínimo */}
-                        <Input
-                            type="number"
-                            placeholder="Monto mín."
-                            value={filters.minAmount}
-                            onChange={(e) => setFilters({...filters, minAmount: e.target.value})}
-                        />
-                        
-                        {/* Monto máximo */}
-                        <Input
-                            type="number"
-                            placeholder="Monto máx."
-                            value={filters.maxAmount}
-                            onChange={(e) => setFilters({...filters, maxAmount: e.target.value})}
+                    </div>
+
+                    {/* Monto mínimo */}
+                    <div className="w-full lg:w-36">
+                        <CurrencyInput
+                            placeholder="Mín."
+                            value={filters.minAmount ? parseFloat(filters.minAmount) : 0}
+                            onValueChange={(value) => setFilters({...filters, minAmount: value > 0 ? value.toString() : ""})}
+                            className="h-8"
                         />
                     </div>
-                </Card>
+
+                    {/* Monto máximo */}
+                    <div className="w-full lg:w-36">
+                        <CurrencyInput
+                            placeholder="Máx."
+                            value={filters.maxAmount ? parseFloat(filters.maxAmount) : 0}
+                            onValueChange={(value) => setFilters({...filters, maxAmount: value > 0 ? value.toString() : ""})}
+                            className="h-8"
+                        />
+                    </div>
+
+                    {/* Limpiar filtros */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={clearFilters}
+                        className="h-9 w-9 flex-shrink-0"
+                        title="Limpiar filtros"
+                    >
+                        <X className="kipo-icon-sm" />
+                    </Button>
+                </div>
 
                 {/* Pestañas y Transacciones */}
                 <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "all" | "income" | "expense")}>
@@ -623,80 +640,80 @@ export default function TransactionsPage() {
                     <div className="space-y-4">
                         {filteredTransactions.map((transaction) => (
                             <Card key={transaction.id} className="hover:shadow-md transition-shadow">
-                                <CardContent className="p-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-4">
-                                            <div className={`p-2 rounded-full ${
-                                                transaction.type === 'income' 
-                                                    ? 'bg-green-100 text-green-600' 
+                                <CardContent className="p-3 sm:p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                                            <div className={`p-2 rounded-lg flex-shrink-0 ${
+                                                transaction.type === 'income'
+                                                    ? 'bg-green-100 text-green-600'
                                                     : 'bg-red-100 text-red-600'
                                             }`}>
                                                 {transaction.type === 'income' ? (
-                                                    <TrendingUp className="h-4 w-4" />
+                                                    <TrendingUp className="kipo-icon-sm" />
                                                 ) : (
-                                                    <TrendingDown className="h-4 w-4" />
+                                                    <TrendingDown className="kipo-icon-sm" />
                                                 )}
                                             </div>
-                                            <div>
-                                                <h3 className="font-medium">{(transaction as any).title || transaction.category}</h3>
-                                                <p className="text-sm text-muted-foreground">
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="font-medium text-sm sm:text-base truncate">
+                                                    {(transaction as any).title || transaction.category}
+                                                </h3>
+                                                <p className="text-xs sm:text-sm text-muted-foreground truncate">
                                                     {transaction.category}
-                                                    {transaction.description && ` • ${transaction.description}`}
+                                                    {transaction.description && (
+                                                        <span className="hidden sm:inline"> • {transaction.description}</span>
+                                                    )}
                                                 </p>
-                                                <div className="flex items-center space-x-2 mt-1">
-                                                    <Calendar className="h-3 w-3 text-muted-foreground" />
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {new Date(transaction.transaction_date).toLocaleDateString('es-MX')}
-                                                    </span>
+                                                <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                                    <span>{new Date(transaction.transaction_date).toLocaleDateString('es-MX', { month: 'short', day: 'numeric' })}</span>
                                                     {transaction.cards && (
                                                         <>
-                                                            <span className="text-xs text-muted-foreground">•</span>
-                                                            <span className="text-xs text-muted-foreground">
-                                                                {transaction.cards.name} ****{transaction.cards.last_four_digits}
+                                                            <span className="hidden sm:inline">•</span>
+                                                            <span className="hidden sm:inline truncate">
+                                                                {transaction.cards.name}
                                                             </span>
                                                         </>
                                                     )}
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex items-center space-x-4">
+                                        <div className="flex items-start gap-2 flex-shrink-0">
                                             <div className="text-right">
-                                                <div className={`text-lg font-semibold ${
-                                                    transaction.type === 'income' 
-                                                        ? 'text-green-600' 
+                                                <div className={`text-base sm:text-lg font-semibold whitespace-nowrap ${
+                                                    transaction.type === 'income'
+                                                        ? 'text-green-600'
                                                         : 'text-red-600'
                                                 }`}>
                                                     {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
                                                 </div>
-                                                {transaction.source && (
-                                                    <Badge variant="outline" className="text-xs">
-                                                        {transaction.source}
-                                                    </Badge>
-                                                )}
                                             </div>
-                                            <div className="flex space-x-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => openEditDialog(transaction)}
-                                                    disabled={Object.values(actionLoading).some(loading => loading)}
-                                                >
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(transaction.id)}
-                                                    className="text-destructive hover:text-destructive"
-                                                    disabled={actionLoading[`delete-${transaction.id}`] || Object.values(actionLoading).some(loading => loading)}
-                                                >
-                                                    {actionLoading[`delete-${transaction.id}`] ? (
-                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                    ) : (
-                                                        <Trash2 className="h-4 w-4" />
-                                                    )}
-                                                </Button>
-                                            </div>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 rounded-full focus-visible:ring-0 focus-visible:ring-offset-0"
+                                                        disabled={Object.values(actionLoading).some(loading => loading)}
+                                                    >
+                                                        <Ellipsis className="kipo-icon" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-48">
+                                                    <DropdownMenuItem onClick={() => openEditDialog(transaction)}>
+                                                        <Edit2 className="kipo-icon-sm" />
+                                                        <span>Editar transacción</span>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleDeleteClick(transaction.id)}
+                                                        disabled={actionLoading[`delete-${transaction.id}`]}
+                                                        className="text-destructive focus:text-destructive"
+                                                    >
+                                                        <Trash2 className="kipo-icon-sm" />
+                                                        <span>Eliminar transacción</span>
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -740,7 +757,7 @@ export default function TransactionsPage() {
                                                             {transaction.cards && (
                                                                 <>
                                                                     <span>•</span>
-                                                                    <span>{transaction.cards.name} ****{transaction.cards.last_four_digits}</span>
+                                                                    <span>{transaction.cards.name}</span>
                                                                 </>
                                                             )}
                                                         </div>
@@ -755,29 +772,33 @@ export default function TransactionsPage() {
                                                             +{formatCurrency(transaction.amount)}
                                                         </div>
                                                     </div>
-                                                    <div className="flex space-x-1">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => openEditDialog(transaction)}
-                                                            disabled={Object.values(actionLoading).some(loading => loading)}
-                                                        >
-                                                            <Edit className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleDelete(transaction.id)}
-                                                            className="text-destructive hover:text-destructive"
-                                                            disabled={actionLoading[`delete-${transaction.id}`] || Object.values(actionLoading).some(loading => loading)}
-                                                        >
-                                                            {actionLoading[`delete-${transaction.id}`] ? (
-                                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                            ) : (
-                                                                <Trash2 className="h-4 w-4" />
-                                                            )}
-                                                        </Button>
-                                                    </div>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 rounded-full focus-visible:ring-0 focus-visible:ring-offset-0"
+                                                                disabled={Object.values(actionLoading).some(loading => loading)}
+                                                            >
+                                                                <Ellipsis className="kipo-icon" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-48">
+                                                            <DropdownMenuItem onClick={() => openEditDialog(transaction)}>
+                                                                <Edit2 className="kipo-icon-sm" />
+                                                                <span>Editar transacción</span>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={() => handleDeleteClick(transaction.id)}
+                                                                disabled={actionLoading[`delete-${transaction.id}`]}
+                                                                className="text-destructive focus:text-destructive"
+                                                            >
+                                                                <Trash2 className="kipo-icon-sm" />
+                                                                <span>Eliminar transacción</span>
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </div>
                                             </div>
                                         </CardContent>
@@ -821,7 +842,7 @@ export default function TransactionsPage() {
                                                             {transaction.cards && (
                                                                 <>
                                                                     <span>•</span>
-                                                                    <span>{transaction.cards.name} ****{transaction.cards.last_four_digits}</span>
+                                                                    <span>{transaction.cards.name}</span>
                                                                 </>
                                                             )}
                                                         </div>
@@ -836,29 +857,33 @@ export default function TransactionsPage() {
                                                             -{formatCurrency(transaction.amount)}
                                                         </div>
                                                     </div>
-                                                    <div className="flex space-x-1">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => openEditDialog(transaction)}
-                                                            disabled={Object.values(actionLoading).some(loading => loading)}
-                                                        >
-                                                            <Edit className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleDelete(transaction.id)}
-                                                            className="text-destructive hover:text-destructive"
-                                                            disabled={actionLoading[`delete-${transaction.id}`] || Object.values(actionLoading).some(loading => loading)}
-                                                        >
-                                                            {actionLoading[`delete-${transaction.id}`] ? (
-                                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                            ) : (
-                                                                <Trash2 className="h-4 w-4" />
-                                                            )}
-                                                        </Button>
-                                                    </div>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 rounded-full focus-visible:ring-0 focus-visible:ring-offset-0"
+                                                                disabled={Object.values(actionLoading).some(loading => loading)}
+                                                            >
+                                                                <Ellipsis className="kipo-icon" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-48">
+                                                            <DropdownMenuItem onClick={() => openEditDialog(transaction)}>
+                                                                <Edit2 className="kipo-icon-sm" />
+                                                                <span>Editar transacción</span>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={() => handleDeleteClick(transaction.id)}
+                                                                disabled={actionLoading[`delete-${transaction.id}`]}
+                                                                className="text-destructive focus:text-destructive"
+                                                            >
+                                                                <Trash2 className="kipo-icon-sm" />
+                                                                <span>Eliminar transacción</span>
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </div>
                                             </div>
                                         </CardContent>
@@ -868,6 +893,39 @@ export default function TransactionsPage() {
                         )}
                     </TabsContent>
                 </Tabs>
+
+                {/* Delete Confirmation Dialog */}
+                <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>¿Eliminar transacción?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Esta acción no se puede deshacer. La transacción será eliminada permanentemente de tu cuenta.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel
+                                disabled={transactionToDelete ? actionLoading[`delete-${transactionToDelete}`] : false}
+                            >
+                                Cancelar
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={handleDelete}
+                                disabled={transactionToDelete ? actionLoading[`delete-${transactionToDelete}`] : false}
+                                className="bg-destructive text-white hover:bg-destructive/90"
+                            >
+                                {transactionToDelete && actionLoading[`delete-${transactionToDelete}`] ? (
+                                    <>
+                                        <Loader2 className="kipo-icon animate-spin" />
+                                        Eliminando...
+                                    </>
+                                ) : (
+                                    'Eliminar'
+                                )}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         </div>
     );

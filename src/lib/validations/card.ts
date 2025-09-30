@@ -2,7 +2,6 @@ import { z } from "zod";
 
 export const createCardSchema = z.object({
   name: z.string().min(1, "El nombre de la tarjeta es requerido"),
-  last_four_digits: z.string().regex(/^\d{4}$/, "Deben ser exactamente 4 dígitos"),
   card_type: z.enum(["credit", "debit"], {
     message: "El tipo de tarjeta es requerido",
   }),

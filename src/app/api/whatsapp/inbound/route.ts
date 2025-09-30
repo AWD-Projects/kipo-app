@@ -7,6 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import { extractTransaction } from "@/server/nlp";
 import { getUserNlpContext } from "@/lib/db/userContext";
+import { formatCurrency } from "@/lib/format";
 
 // --- ADMIN client (service role) ----
 const supabaseAdmin = createClient(
@@ -224,10 +225,10 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`[NLP] Transaction created:`, transaction);
-    
-    // Response based on transaction type
+
+    // Response based on transaction type with formatted currency
     const responsePrefix = extractedTx.type === 'income' ? 'Ingreso registrado' : 'Gasto registrado';
-    return twiml(`✅ ${responsePrefix}: $${extractedTx.amount} — ${extractedTx.description}`);
+    return twiml(`✅ ${responsePrefix}: ${formatCurrency(extractedTx.amount)} — ${extractedTx.description}`);
     
   } catch (error) {
     console.error("Error processing NLP extraction:", error);

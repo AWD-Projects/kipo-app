@@ -36,15 +36,14 @@ export default function Home() {
                 }`}
             >
                 <div className="container mx-auto flex h-16 items-center justify-between px-4">
-                    <div className="flex items-center gap-2">
-                        <Image 
-                            src="/logo.png" 
-                            alt="Kipo Logo" 
-                            width={32}
-                            height={32}
-                            className="h-8 w-auto"
+                    <div className="flex items-center">
+                        <Image
+                            src="/logo.png"
+                            alt="Logo"
+                            width={40}
+                            height={40}
+                            className="h-10 w-auto"
                         />
-                        <div className="text-2xl font-bold text-primary">Kipo</div>
                     </div>
                     <div className="flex space-x-3">
                         <Link href="/login">

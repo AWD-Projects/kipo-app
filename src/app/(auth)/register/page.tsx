@@ -105,16 +105,16 @@ export default function RegisterPage() {
             <div className="max-w-md w-full space-y-8">
                 <div className="text-center">
                     <div className="flex justify-center mb-6">
-                        <Image 
-                            src="/logo.png" 
-                            alt="Kipo Logo" 
-                            width={64}
-                            height={64}
-                            className="h-16 w-auto"
+                        <Image
+                            src="/logo.png"
+                            alt="Logo"
+                            width={80}
+                            height={80}
+                            className="h-20 w-auto"
                         />
                     </div>
                     <h1 className="text-3xl font-bold tracking-tight text-primary">
-                        Únete a Kipo
+                        Únete
                     </h1>
                     <p className="mt-2 text-sm text-muted-foreground">
                         Crea tu cuenta y comienza a gestionar tus finanzas

@@ -2,8 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Slide } from "@mui/material";
-import { FaCcVisa, FaCcMastercard, FaCcAmex, FaCcDiscover } from "react-icons/fa";
 import { CreditCard as DefaultCardIcon } from "lucide-react";
+import {
+    SiVisa,
+    SiMastercard,
+    SiAmericanexpress,
+    SiDiscover
+} from "react-icons/si";
 import {
     Card,
     CardContent,
@@ -31,13 +36,30 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
     Plus,
     CreditCard,
-    Edit,
+    Edit2,
     Trash2,
-    Eye,
-    EyeOff,
+    Power,
     Loader2,
+    Ellipsis,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -66,11 +88,12 @@ export default function CardsPage() {
     const [user, setUser] = useState<{ id: string } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [actionLoading, setActionLoading] = useState<{ [key: string]: boolean }>({});
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [cardToDelete, setCardToDelete] = useState<string | null>(null);
     const supabase = createClient();
 
     const [formData, setFormData] = useState<CreateCardInput>({
         name: "",
-        last_four_digits: "",
         card_type: "credit",
         brand: "visa",
         color: "#4F46E5",
@@ -125,8 +148,14 @@ export default function CardsPage() {
                 });
 
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to update card');
+                    let errorMessage = 'Failed to update card';
+                    try {
+                        const error = await response.json();
+                        errorMessage = error.error || errorMessage;
+                    } catch (e) {
+                        console.error('Failed to parse error response:', e);
+                    }
+                    throw new Error(errorMessage);
                 }
 
                 toast.success("Tarjeta actualizada: Los datos de la tarjeta se han actualizado correctamente.");
@@ -141,8 +170,14 @@ export default function CardsPage() {
                 });
 
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to create card');
+                    let errorMessage = 'Failed to create card';
+                    try {
+                        const error = await response.json();
+                        errorMessage = error.error || errorMessage;
+                    } catch (e) {
+                        console.error('Failed to parse error response:', e);
+                    }
+                    throw new Error(errorMessage);
                 }
 
                 toast.success("Tarjeta creada: La nueva tarjeta se ha agregado exitosamente.");
@@ -182,8 +217,14 @@ export default function CardsPage() {
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to toggle card status');
+                let errorMessage = 'Failed to toggle card status';
+                try {
+                    const error = await response.json();
+                    errorMessage = error.error || errorMessage;
+                } catch (e) {
+                    console.error('Failed to parse error response:', e);
+                }
+                throw new Error(errorMessage);
             }
 
             toast.success(`Tarjeta ${card.is_active ? 'desactivada' : 'activada'}: La tarjeta ${card.name} ha sido ${card.is_active ? 'desactivada' : 'activada'}.`);
@@ -204,25 +245,38 @@ export default function CardsPage() {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('¿Estás seguro de que quieres eliminar esta tarjeta?')) return;
+    const handleDeleteClick = (id: string) => {
+        setCardToDelete(id);
+        setDeleteDialogOpen(true);
+    };
 
-        const actionKey = `delete-${id}`;
+    const handleDelete = async () => {
+        if (!cardToDelete) return;
+
+        const actionKey = `delete-${cardToDelete}`;
         setActionLoading(prev => ({ ...prev, [actionKey]: true }));
 
         try {
-            const response = await fetch(`/api/cards/${id}`, {
+            const response = await fetch(`/api/cards/${cardToDelete}`, {
                 method: 'DELETE',
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to delete card');
+                let errorMessage = 'Failed to delete card';
+                try {
+                    const error = await response.json();
+                    errorMessage = error.error || errorMessage;
+                } catch (e) {
+                    console.error('Failed to parse error response:', e);
+                }
+                throw new Error(errorMessage);
             }
 
             toast.success("Tarjeta eliminada: La tarjeta se ha eliminado correctamente.");
 
             if (user) await loadCards(user.id);
+            setDeleteDialogOpen(false);
+            setCardToDelete(null);
         } catch (error) {
             console.error('Error deleting card:', error);
             toast.error(error instanceof Error ? error.message : "No se pudo eliminar la tarjeta.");
@@ -234,7 +288,6 @@ export default function CardsPage() {
     const resetForm = () => {
         setFormData({
             name: "",
-            last_four_digits: "",
             card_type: "credit",
             brand: "visa",
             color: "#4F46E5",
@@ -247,7 +300,6 @@ export default function CardsPage() {
         setEditingCard(card);
         setFormData({
             name: card.name,
-            last_four_digits: card.last_four_digits,
             card_type: card.card_type as "credit" | "debit",
             brand: card.brand as "visa" | "mastercard" | "amex" | "discover" | "other",
             color: card.color || "#4F46E5",
@@ -257,19 +309,19 @@ export default function CardsPage() {
     };
 
     const getBrandIcon = (brand: string) => {
-        const iconProps = { className: "h-8 w-8 text-primary" };
-        
-        switch (brand) {
+        const iconClass = "h-10 w-10";
+
+        switch (brand.toLowerCase()) {
             case 'visa':
-                return <FaCcVisa {...iconProps} />;
+                return <SiVisa className={`${iconClass} text-[#1A1F71]`} />;
             case 'mastercard':
-                return <FaCcMastercard {...iconProps} />;
+                return <SiMastercard className={`${iconClass} text-[#EB001B]`} />;
             case 'amex':
-                return <FaCcAmex {...iconProps} />;
+                return <SiAmericanexpress className={`${iconClass} text-[#006FCF]`} />;
             case 'discover':
-                return <FaCcDiscover {...iconProps} />;
+                return <SiDiscover className={`${iconClass} text-[#FF6000]`} />;
             default:
-                return <DefaultCardIcon {...iconProps} />;
+                return <DefaultCardIcon className="h-8 w-8 text-muted-foreground" />;
         }
     };
 
@@ -288,19 +340,19 @@ export default function CardsPage() {
 
     return (
         <div className="kipo-dashboard-layout">
-            <div className="space-y-6">
-                <div className="flex items-center justify-between">
+            <div className="kipo-stack-lg">
+                {/* Page Header */}
+                <div className="kipo-section-header">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight text-primary">
-                            Tarjetas
-                        </h1>
-                        <p className="text-muted-foreground">
+                        <h1 className="kipo-page-title">Tarjetas</h1>
+                        <p className="kipo-page-description">
                             Gestiona tus tarjetas de crédito y débito
                         </p>
                     </div>
-                    <Button onClick={() => { resetForm(); setIsDialogOpen(true); }}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Agregar Tarjeta
+                    <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} size="default" className="kipo-mobile-full">
+                        <Plus className="kipo-icon-sm" />
+                        <span className="hidden sm:inline">Agregar Tarjeta</span>
+                        <span className="sm:hidden">Agregar</span>
                     </Button>
 
                     {/* Compact Slide-up Dialog */}
@@ -311,14 +363,14 @@ export default function CardsPage() {
                                 <Button
                                     variant="ghost"
                                     onClick={() => setIsDialogOpen(false)}
-                                    className="text-primary"
+                                    size="sm"
                                 >
                                     Cancelar
                                 </Button>
                                 <h1 className="text-lg font-semibold">
                                     {editingCard ? 'Editar Tarjeta' : 'Nueva Tarjeta'}
                                 </h1>
-                                <div className="w-16"></div> {/* Spacer for centering */}
+                                <div className="w-20"></div> {/* Spacer for centering */}
                             </div>
                             
                             {/* Scrollable content */}
@@ -375,22 +427,6 @@ export default function CardsPage() {
                                 </div>
 
                                 <div className="space-y-3">
-                                    <Label htmlFor="last_four_digits" className="text-sm font-medium text-foreground">Últimos 4 dígitos</Label>
-                                    <Input
-                                        id="last_four_digits"
-                                        placeholder="1234"
-                                        maxLength={4}
-                                        value={formData.last_four_digits}
-                                        onChange={(e) => {
-                                            const value = e.target.value.replace(/\D/g, '');
-                                            setFormData({ ...formData, last_four_digits: value });
-                                        }}
-                                        required
-                                        className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
-                                    />
-                                </div>
-
-                                <div className="space-y-3">
                                     <Label className="text-sm font-medium text-foreground">Color de la tarjeta</Label>
                                     <div className="flex space-x-3 justify-center">
                                         {CARD_COLORS.map((color) => (
@@ -409,16 +445,17 @@ export default function CardsPage() {
                                     </div>
                                 </div>
 
-                                {/* iPhone-style submit button */}
+                                {/* Submit button */}
                                 <div className="pt-4 pb-6">
-                                    <Button 
-                                        type="submit" 
+                                    <Button
+                                        type="submit"
                                         disabled={isSubmitting}
-                                        className="w-full h-14 rounded-2xl text-base font-semibold bg-primary hover:bg-primary/90 shadow-lg transition-all"
+                                        size="lg"
+                                        className="w-full rounded-xl"
                                     >
                                         {isSubmitting ? (
                                             <>
-                                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                                <Loader2 className="kipo-icon animate-spin" />
                                                 {editingCard ? 'Actualizando...' : 'Agregando...'}
                                             </>
                                         ) : (
@@ -436,100 +473,138 @@ export default function CardsPage() {
 
                 {cards.length === 0 ? (
                     <Card className="text-center py-12">
-                        <CardContent>
-                            <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                            <h3 className="text-lg font-medium mb-2">No hay tarjetas</h3>
-                            <p className="text-muted-foreground mb-6">
-                                Agrega tu primera tarjeta para comenzar a registrar transacciones
-                            </p>
-                            <Button onClick={() => setIsDialogOpen(true)}>
-                                <Plus className="h-4 w-4 mr-2" />
+                        <CardContent className="kipo-stack">
+                            <CreditCard className="h-12 w-12 mx-auto text-muted-foreground" />
+                            <div>
+                                <h3 className="text-base sm:text-lg font-medium mb-2">No hay tarjetas</h3>
+                                <p className="text-sm text-muted-foreground mb-6">
+                                    Agrega tu primera tarjeta para comenzar a registrar transacciones
+                                </p>
+                            </div>
+                            <Button onClick={() => setIsDialogOpen(true)} size="default">
+                                <Plus className="kipo-icon-sm" />
                                 Agregar Tarjeta
                             </Button>
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="kipo-grid-3">
                         {cards.map((card) => (
-                            <Card 
-                                key={card.id} 
-                                className={`relative overflow-hidden ${
+                            <Card
+                                key={card.id}
+                                className={`relative overflow-hidden transition-all ${
                                     !card.is_active ? 'opacity-60' : ''
                                 }`}
                             >
-                                <div 
+                                <div
                                     className="absolute inset-0 opacity-10"
                                     style={{ backgroundColor: card.color || '#4F46E5' }}
                                 />
-                                <CardHeader className="relative">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <CardTitle className="text-lg">{card.name}</CardTitle>
-                                            <p className="text-sm text-muted-foreground capitalize">
+                                <CardHeader className="relative pb-3">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1 min-w-0">
+                                            <CardTitle className="text-base sm:text-lg truncate">{card.name}</CardTitle>
+                                            <p className="text-xs sm:text-sm text-muted-foreground capitalize">
                                                 {card.brand} • {card.card_type === 'credit' ? 'Crédito' : 'Débito'}
                                             </p>
                                         </div>
-                                        <Badge 
+                                        <Badge
                                             variant={card.is_active ? "default" : "secondary"}
-                                            className="text-xs"
+                                            className="text-xs flex-shrink-0"
                                         >
                                             {card.is_active ? 'Activa' : 'Inactiva'}
                                         </Badge>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="relative">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="text-lg font-mono">
-                                            •••• •••• •••• {card.last_four_digits}
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex space-x-2">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => openEditDialog(card)}
-                                            disabled={Object.values(actionLoading).some(loading => loading)}
-                                        >
-                                            <Edit className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleToggleActive(card)}
-                                            disabled={actionLoading[`toggle-${card.id}`] || Object.values(actionLoading).some(loading => loading)}
-                                        >
-                                            {actionLoading[`toggle-${card.id}`] ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : card.is_active ? (
-                                                <EyeOff className="h-4 w-4" />
-                                            ) : (
-                                                <Eye className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleDelete(card.id)}
-                                            className="text-destructive hover:text-destructive"
-                                            disabled={actionLoading[`delete-${card.id}`] || Object.values(actionLoading).some(loading => loading)}
-                                        >
-                                            {actionLoading[`delete-${card.id}`] ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <Trash2 className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                        </div>
-                                        <div className="opacity-80">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-shrink-0">
                                             {getBrandIcon(card.brand)}
                                         </div>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="rounded-full focus-visible:ring-0 focus-visible:ring-offset-0"
+                                                    disabled={Object.values(actionLoading).some(loading => loading)}
+                                                >
+                                                    <Ellipsis className="kipo-icon" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-48">
+                                                <DropdownMenuItem
+                                                    onClick={() => openEditDialog(card)}
+                                                >
+                                                    <Edit2 className="kipo-icon-sm" />
+                                                    <span>Editar tarjeta</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() => handleToggleActive(card)}
+                                                    disabled={actionLoading[`toggle-${card.id}`]}
+                                                >
+                                                    {actionLoading[`toggle-${card.id}`] ? (
+                                                        <>
+                                                            <Loader2 className="kipo-icon-sm animate-spin" />
+                                                            <span>Procesando...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Power className="kipo-icon-sm" />
+                                                            <span>{card.is_active ? 'Desactivar' : 'Activar'}</span>
+                                                        </>
+                                                    )}
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    onClick={() => handleDeleteClick(card.id)}
+                                                    disabled={actionLoading[`delete-${card.id}`]}
+                                                    className="text-destructive focus:text-destructive"
+                                                >
+                                                    <Trash2 className="kipo-icon-sm" />
+                                                    <span>Eliminar tarjeta</span>
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </div>
                                 </CardContent>
                             </Card>
                         ))}
                     </div>
                 )}
+
+                {/* Delete Confirmation Dialog */}
+                <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>¿Eliminar tarjeta?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Esta acción no se puede deshacer. La tarjeta será eliminada permanentemente de tu cuenta.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel
+                                disabled={cardToDelete ? actionLoading[`delete-${cardToDelete}`] : false}
+                            >
+                                Cancelar
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={handleDelete}
+                                disabled={cardToDelete ? actionLoading[`delete-${cardToDelete}`] : false}
+                                className="bg-destructive text-white hover:bg-destructive/90"
+                            >
+                                {cardToDelete && actionLoading[`delete-${cardToDelete}`] ? (
+                                    <>
+                                        <Loader2 className="kipo-icon animate-spin" />
+                                        Eliminando...
+                                    </>
+                                ) : (
+                                    'Eliminar'
+                                )}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         </div>
     );

@@ -184,29 +184,30 @@ export default function SettingsPage() {
 
     return (
         <div className="kipo-dashboard-layout">
-            <div className="space-y-6">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-primary">
-                        Configuración
-                    </h1>
-                    <p className="text-muted-foreground">
-                        Gestiona tu perfil y configuraciones de la aplicación
-                    </p>
+            <div className="kipo-stack-lg">
+                {/* Page Header */}
+                <div className="kipo-section-header">
+                    <div>
+                        <h1 className="kipo-page-title">Configuración</h1>
+                        <p className="kipo-page-description">
+                            Gestiona tu perfil y configuraciones de la aplicación
+                        </p>
+                    </div>
                 </div>
 
                 {/* Profile Section */}
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Settings className="h-5 w-5" />
+                        <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                            <Settings className="kipo-icon" />
                             Perfil de Usuario
                         </CardTitle>
                         <CardDescription>
                             Información básica de tu cuenta
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="grid md:grid-cols-2 gap-4">
+                    <CardContent className="kipo-stack">
+                        <div className="kipo-grid-2">
                             <div>
                                 <Label>Nombre completo</Label>
                                 <div className="text-sm mt-1">
@@ -218,7 +219,7 @@ export default function SettingsPage() {
                                 <div className="text-sm mt-1">{user?.email}</div>
                             </div>
                         </div>
-                        <div className="grid md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div>
                                 <Label>Moneda</Label>
                                 <div className="text-sm mt-1">{profile?.currency || 'MXN'}</div>
@@ -238,27 +239,28 @@ export default function SettingsPage() {
                 {/* API Keys Section */}
                 <Card>
                     <CardHeader>
-                        <div className="flex items-center justify-between">
+                        <div className="kipo-section-header">
                             <div>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Key className="h-5 w-5" />
+                                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                                    <Key className="kipo-icon" />
                                     API Keys para iOS Shortcuts
                                 </CardTitle>
                                 <CardDescription>
                                     Genera tokens seguros para usar con Shortcuts de iOS
                                 </CardDescription>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="kipo-button-group">
                                 <Link href="/docs/shortcuts">
-                                    <Button variant="outline" size="sm">
-                                        <ExternalLink className="h-4 w-4 mr-2" />
-                                        Ver Guía
+                                    <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                                        <ExternalLink className="kipo-icon-sm mr-2" />
+                                        <span className="hidden sm:inline">Ver Guía</span>
+                                        <span className="sm:hidden">Guía</span>
                                     </Button>
                                 </Link>
                                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                                     <DialogTrigger asChild>
-                                        <Button>
-                                            <Plus className="h-4 w-4 mr-2" />
+                                        <Button size="sm" className="w-full sm:w-auto">
+                                            <Plus className="kipo-icon-sm mr-2" />
                                             Crear Token
                                         </Button>
                                     </DialogTrigger>

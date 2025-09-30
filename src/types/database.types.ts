@@ -93,7 +93,6 @@ export interface Database {
           id: string
           user_id: string
           name: string
-          last_four_digits: string
           card_type: string
           brand: string
           color: string | null
@@ -105,7 +104,6 @@ export interface Database {
           id?: string
           user_id: string
           name: string
-          last_four_digits: string
           card_type: string
           brand: string
           color?: string | null
@@ -117,7 +115,6 @@ export interface Database {
           id?: string
           user_id?: string
           name?: string
-          last_four_digits?: string
           card_type?: string
           brand?: string
           color?: string | null

@@ -10,13 +10,12 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { InfoBanner } from "@/components/ui/info-banner";
 import {
-    Phone,
-    Link,
+    Link as LinkIcon,
     Unlink,
     Loader2,
     MessageCircle,
@@ -24,10 +23,12 @@ import {
     Clock,
     XCircle,
     RefreshCw,
-    Info
+    Smartphone,
+    ExternalLink
 } from "lucide-react";
 import { toast } from "@/lib/toast";
-import { normalizePhoneE164, formatPhoneDisplay } from "@/lib/phone";
+import { formatPhoneDisplay } from "@/lib/phone";
+import Link from "next/link";
 import type {
     WhatsAppStatusResponse,
     WhatsAppLinkInitResponse,
@@ -79,11 +80,14 @@ export default function WhatsAppLinkCard({ className }: WhatsAppLinkCardProps) {
     };
 
     const handleGenerateCode = async () => {
-        const normalizedPhone = normalizePhoneE164(phoneNumber);
-        if (!normalizedPhone) {
-            toast.error('Formato de teléfono inválido. Ejemplo: +5215550000000');
+        // Validate phone format (+521 + 10 digits)
+        const digits = phoneNumber.slice(4); // Remove +521
+        if (digits.length !== 10) {
+            toast.error('Ingresa un número válido de 10 dígitos');
             return;
         }
+
+        const normalizedPhone = phoneNumber; // Already in E164 format
 
         try {
             setActionLoading(true);
@@ -219,12 +223,9 @@ export default function WhatsAppLinkCard({ className }: WhatsAppLinkCardProps) {
                 {status === 'verified' && statusData ? (
                     // Verified state
                     <div className="space-y-4">
-                        <Alert>
-                            <CheckCircle className="h-4 w-4" />
-                            <AlertDescription>
-                                Tu WhatsApp está vinculado exitosamente ✅
-                            </AlertDescription>
-                        </Alert>
+                        <InfoBanner variant="success">
+                            Tu WhatsApp está vinculado exitosamente ✅
+                        </InfoBanner>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <div>
@@ -289,62 +290,65 @@ export default function WhatsAppLinkCard({ className }: WhatsAppLinkCardProps) {
                 ) : (
                     // Pending/setup state
                     <div className="space-y-4">
-                        <Alert>
-                            <Info className="h-4 w-4" />
-                            <AlertDescription>
-                                Sigue estos pasos para vincular tu WhatsApp 👇
-                            </AlertDescription>
-                        </Alert>
+                        <Link href="/docs/whatsapp">
+                            <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                                <ExternalLink className="kipo-icon-sm mr-2" />
+                                Ver Guía de Vinculación
+                            </Button>
+                        </Link>
 
                         <div className="space-y-2">
-                            <Label htmlFor="phone">Número de WhatsApp (formato internacional)</Label>
+                            <Label htmlFor="phone">Número de WhatsApp</Label>
                             <div className="flex gap-2">
-                                <Input
+                                <PhoneInput
                                     id="phone"
-                                    placeholder="+5215550000000"
+                                    prefix="+521"
+                                    maxDigits={10}
                                     value={phoneNumber}
-                                    onChange={(e) => setPhoneNumber(e.target.value)}
+                                    onValueChange={setPhoneNumber}
                                     disabled={actionLoading}
-                                    className="font-mono"
+                                    placeholder="+5215551234567"
                                 />
                                 <Button
                                     onClick={handleGenerateCode}
-                                    disabled={actionLoading || !phoneNumber.trim()}
+                                    disabled={actionLoading || phoneNumber.length !== 14}
+                                    size="sm"
+                                    className="flex-shrink-0"
                                 >
                                     {actionLoading ? (
-                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        <Loader2 className="kipo-icon-sm mr-2 animate-spin" />
                                     ) : (
-                                        <Link className="h-4 w-4 mr-2" />
+                                        <LinkIcon className="kipo-icon-sm mr-2" />
                                     )}
-                                    Generar código
+                                    <span className="hidden sm:inline">Generar código</span>
+                                    <span className="sm:hidden">Generar</span>
                                 </Button>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                Ejemplo: +5215550000000 (México), +1234567890 (USA)
+                                El prefijo +521 se agrega automáticamente para números mexicanos
                             </p>
                         </div>
 
                         {verificationCode && codeExpiresAt && (
-                            <Alert className="border-blue-200 bg-blue-50">
-                                <Phone className="h-4 w-4" />
-                                <AlertDescription>
-                                    <div className="space-y-2">
-                                        <div className="font-medium">
-                                            Paso 2: Envía este mensaje a WhatsApp
+                            <InfoBanner variant="info" title="Paso 2: Envía este mensaje a WhatsApp">
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border font-mono text-base font-medium">
+                                        <span className="text-primary">LINK</span>
+                                        <span>{verificationCode}</span>
+                                    </div>
+                                    <div className="space-y-1 text-xs">
+                                        <div className="flex items-center gap-1">
+                                            <Smartphone className="h-3 w-3" />
+                                            <span>Envía ese mensaje al número de Twilio:</span>
                                         </div>
-                                        <div className="font-mono text-lg bg-white p-2 rounded border">
-                                            LINK {verificationCode}
-                                        </div>
-                                        <div className="text-sm space-y-1">
-                                            <div>📱 Envía ese mensaje al número del Sandbox de Twilio:</div>
-                                            <div className="font-mono">+1 415 523 8886</div>
-                                            <div className="text-amber-600">
-                                                ⏰ {formatExpirationTime(codeExpiresAt)}
-                                            </div>
+                                        <div className="font-mono font-medium">+1 415 523 8886</div>
+                                        <div className="flex items-center gap-1 text-amber-700">
+                                            <Clock className="h-3 w-3" />
+                                            <span>{formatExpirationTime(codeExpiresAt)}</span>
                                         </div>
                                     </div>
-                                </AlertDescription>
-                            </Alert>
+                                </div>
+                            </InfoBanner>
                         )}
                     </div>
                 )}

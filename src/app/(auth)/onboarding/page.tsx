@@ -16,6 +16,7 @@ import {
 import { ArrowRight, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/lib/toast";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 const EXPENSE_CATEGORIES = [
     "Vivienda",
@@ -36,9 +37,9 @@ export default function OnboardingPage() {
     const router = useRouter();
     const [user, setUser] = useState<{ id: string } | null>(null);
     const [formData, setFormData] = useState({
-        monthlyIncome: "",
-        monthlyExpenses: "",
-        savingsGoal: "",
+        monthlyIncome: 0,
+        monthlyExpenses: 0,
+        savingsGoal: 0,
         mainExpenseCategories: [] as string[],
     });
     const [error, setError] = useState("");
@@ -56,13 +57,6 @@ export default function OnboardingPage() {
         };
         getUser();
     }, [router, supabase.auth]);
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value,
-        });
-    };
 
     const toggleCategory = (category: string) => {
         setFormData(prev => ({
@@ -86,9 +80,9 @@ export default function OnboardingPage() {
                 .from('user_profiles')
                 .upsert({
                     id: user.id,
-                    monthly_income: parseFloat(formData.monthlyIncome) || 0,
-                    monthly_expenses: parseFloat(formData.monthlyExpenses) || 0,
-                    savings_goal: parseFloat(formData.savingsGoal) || 0,
+                    monthly_income: formData.monthlyIncome || 0,
+                    monthly_expenses: formData.monthlyExpenses || 0,
+                    savings_goal: formData.savingsGoal || 0,
                     main_expense_categories: formData.mainExpenseCategories,
                     is_onboarded: true,
                 });
@@ -124,16 +118,16 @@ export default function OnboardingPage() {
             <div className="max-w-2xl w-full space-y-8">
                 <div className="text-center">
                     <div className="flex justify-center mb-6">
-                        <Image 
-                            src="/logo.png" 
-                            alt="Kipo Logo" 
-                            width={64}
-                            height={64}
-                            className="h-16 w-auto"
+                        <Image
+                            src="/logo.png"
+                            alt="Logo"
+                            width={80}
+                            height={80}
+                            className="h-20 w-auto"
                         />
                     </div>
                     <h1 className="text-3xl font-bold tracking-tight text-primary">
-                        ¡Bienvenido a Kipo!
+                        ¡Bienvenido!
                     </h1>
                     <p className="mt-2 text-sm text-muted-foreground">
                         Personaliza tu experiencia completando tu perfil financiero
@@ -159,43 +153,43 @@ export default function OnboardingPage() {
                             
                             <div className="grid md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="monthlyIncome">Ingresos mensuales (MXN)</Label>
-                                    <Input
+                                    <Label htmlFor="monthlyIncome">Ingresos mensuales</Label>
+                                    <CurrencyInput
                                         id="monthlyIncome"
-                                        name="monthlyIncome"
-                                        type="number"
-                                        step="0.01"
                                         placeholder="0.00"
                                         value={formData.monthlyIncome}
-                                        onChange={handleInputChange}
+                                        onValueChange={(value) => setFormData({
+                                            ...formData,
+                                            monthlyIncome: value
+                                        })}
                                         disabled={isLoading}
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="monthlyExpenses">Gastos mensuales estimados (MXN)</Label>
-                                    <Input
+                                    <Label htmlFor="monthlyExpenses">Gastos mensuales estimados</Label>
+                                    <CurrencyInput
                                         id="monthlyExpenses"
-                                        name="monthlyExpenses"
-                                        type="number"
-                                        step="0.01"
                                         placeholder="0.00"
                                         value={formData.monthlyExpenses}
-                                        onChange={handleInputChange}
+                                        onValueChange={(value) => setFormData({
+                                            ...formData,
+                                            monthlyExpenses: value
+                                        })}
                                         disabled={isLoading}
                                     />
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="savingsGoal">Meta de ahorro mensual (MXN)</Label>
-                                <Input
+                                <Label htmlFor="savingsGoal">Meta de ahorro mensual</Label>
+                                <CurrencyInput
                                     id="savingsGoal"
-                                    name="savingsGoal"
-                                    type="number"
-                                    step="0.01"
                                     placeholder="0.00"
                                     value={formData.savingsGoal}
-                                    onChange={handleInputChange}
+                                    onValueChange={(value) => setFormData({
+                                        ...formData,
+                                        savingsGoal: value
+                                    })}
                                     disabled={isLoading}
                                 />
                             </div>

@@ -36,27 +36,116 @@
 }
 
 @layer components {
-    .kipo-gradient {
-        @apply bg-gradient-to-r from-[hsl(0,0%,20%)] via-[hsl(0,0%,50%)] to-[hsl(0,0%,70%)];
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+    /* Unified Layout System */
+    .kipo-container {
+        @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
     }
 
-    .kipo-card {
-        @apply bg-card rounded-lg border border-border p-4 shadow-sm transition-all hover:shadow-md;
-    }
-
-    .kipo-form-container {
-        @apply max-w-md mx-auto p-6 bg-card rounded-lg border border-border shadow-sm;
+    .kipo-page {
+        @apply min-h-screen bg-background;
     }
 
     .kipo-dashboard-layout {
-        @apply container mx-auto py-6 space-y-6;
+        @apply w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 lg:py-8 space-y-6;
     }
 
+    /* Card System */
+    .kipo-card {
+        @apply bg-card rounded-lg border border-border p-4 sm:p-6 shadow-sm transition-all hover:shadow-md;
+    }
+
+    .kipo-card-compact {
+        @apply bg-card rounded-lg border border-border p-3 sm:p-4 shadow-sm;
+    }
+
+    .kipo-form-container {
+        @apply w-full max-w-md mx-auto p-6 bg-card rounded-lg border border-border shadow-sm;
+    }
+
+    /* Section Headers */
+    .kipo-section-header {
+        @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6;
+    }
+
+    .kipo-page-title {
+        @apply text-2xl sm:text-3xl font-bold tracking-tight text-primary;
+    }
+
+    .kipo-page-description {
+        @apply text-sm sm:text-base text-muted-foreground mt-1;
+    }
+
+    /* Spacing System */
     .kipo-section {
-        @apply mb-6;
+        @apply mb-6 space-y-4;
+    }
+
+    .kipo-stack {
+        @apply space-y-4;
+    }
+
+    .kipo-stack-sm {
+        @apply space-y-2;
+    }
+
+    .kipo-stack-lg {
+        @apply space-y-6;
+    }
+
+    .kipo-grid {
+        @apply grid gap-4 sm:gap-6;
+    }
+
+    .kipo-grid-2 {
+        @apply grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6;
+    }
+
+    .kipo-grid-3 {
+        @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
+    }
+
+    .kipo-grid-4 {
+        @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6;
+    }
+
+    /* Form Elements */
+    .kipo-form-group {
+        @apply space-y-2;
+    }
+
+    .kipo-form-row {
+        @apply grid grid-cols-1 sm:grid-cols-2 gap-4;
+    }
+
+    /* Icon Size Standards */
+    .kipo-icon-sm {
+        @apply h-4 w-4;
+    }
+
+    .kipo-icon {
+        @apply h-5 w-5;
+    }
+
+    .kipo-icon-lg {
+        @apply h-6 w-6;
+    }
+
+    /* Button Groups */
+    .kipo-button-group {
+        @apply flex flex-col sm:flex-row gap-2 sm:gap-3;
+    }
+
+    /* Mobile Optimization */
+    .kipo-mobile-full {
+        @apply w-full sm:w-auto;
+    }
+
+    .kipo-hide-mobile {
+        @apply hidden sm:block;
+    }
+
+    .kipo-show-mobile {
+        @apply block sm:hidden;
     }
 }
 

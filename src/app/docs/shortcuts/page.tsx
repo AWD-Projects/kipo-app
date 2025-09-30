@@ -37,6 +37,7 @@ export default function ShortcutsDocsPage() {
   "type": "expense",
   "amount": 120.50,
   "category": "Comida",
+  "title": "Almuerzo",
   "description": "Tacos en el trabajo",
   "transaction_date": "2024-01-15"
 }`;

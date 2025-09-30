@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
     LayoutDashboard,
     CreditCard,
@@ -11,30 +11,19 @@ import {
     Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ReactNode, useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { PageLoadingState } from "@/components/ui/loading-state";
+import { ReactNode } from "react";
+import { useUser } from "@/hooks/useUser";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<{ id: string; email?: string; user_metadata?: { full_name?: string } } | null>(null);
-    const [loading, setLoading] = useState(true);
+    const { user, loading, router, supabase } = useUser();
     const pathname = usePathname();
-    const router = useRouter();
-    const supabase = createClient();
 
-    useEffect(() => {
-        const getUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            setUser(user);
-            setLoading(false);
-            
-            if (!user) {
-                router.push('/login');
-            }
-        };
-        getUser();
-    }, [router, supabase.auth]);
+    // Redirect if not authenticated
+    if (!loading && !user) {
+        router.push('/login');
+        return null;
+    }
 
     const handleSignOut = async () => {
         await supabase.auth.signOut();
@@ -42,11 +31,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     };
 
     if (loading) {
-        return <Skeleton className="h-screen w-full" />;
-    }
-
-    if (!user) {
-        return null;
+        return <PageLoadingState message="Cargando tu dashboard..." />;
     }
 
     const navItems = [
@@ -74,37 +59,40 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
     return (
         <div className="flex flex-col h-screen bg-background">
-            <header className="flex items-center justify-between p-4 bg-card border-b">
-                <Link href="/" className="flex items-center gap-2">
-                    <Image 
-                        src="/logo.png" 
-                        alt="Kipo Logo" 
-                        width={32}
-                        height={32}
-                        className="h-8 w-auto"
+            {/* Header */}
+            <header className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 bg-card border-b">
+                <Link href="/" className="flex items-center">
+                    <Image
+                        src="/logo.png"
+                        alt="Logo"
+                        width={40}
+                        height={40}
+                        className="h-10 w-auto"
                     />
                 </Link>
                 <Button
                     variant="ghost"
+                    size="sm"
                     className="gap-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                     onClick={handleSignOut}
                 >
-                    <LogOut className="h-4 w-4" />
-                    Cerrar sesión
+                    <LogOut className="kipo-icon-sm" />
+                    <span className="hidden sm:inline">Cerrar sesión</span>
                 </Button>
             </header>
 
             <div className="flex flex-1 overflow-hidden">
-                <aside className="hidden md:flex flex-col w-64 border-r bg-card">
-                    <nav className="flex-1 px-4 py-6 space-y-1">
+                {/* Desktop Sidebar */}
+                <aside className="hidden lg:flex flex-col w-64 border-r bg-card">
+                    <nav className="flex-1 px-3 py-6 space-y-1">
                         {navItems.map(({ name, href, icon }) => (
                             <Link
                                 key={href}
                                 href={href}
-                                className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                                className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                                     pathname === href
                                         ? "bg-primary text-primary-foreground"
-                                        : "hover:bg-accent hover:text-accent-foreground"
+                                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                                 }`}
                             >
                                 {icon}
@@ -112,51 +100,53 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                             </Link>
                         ))}
                     </nav>
-                    <div className="p-2">
-                        <Card>
-                            <div className="flex items-center p-2">
-                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mr-3 overflow-hidden">
-                                    <Image 
-                                        src="/icons/avatar/kipo.png" 
-                                        alt="User Avatar" 
-                                        width={32}
-                                        height={32}
-                                        className="w-8 h-8 object-contain"
-                                    />
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="font-medium text-sm">
-                                        {user?.user_metadata?.full_name || user?.email?.split('@')[0]}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground truncate">
-                                        {user?.email}
-                                    </span>
-                                </div>
+                    <div className="p-3 border-t">
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                <Image
+                                    src="/icons/avatar/kipo.png"
+                                    alt="User Avatar"
+                                    width={32}
+                                    height={32}
+                                    className="w-8 h-8 object-contain"
+                                />
                             </div>
-                        </Card>
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="font-medium text-sm truncate">
+                                    {user?.user_metadata?.full_name || user?.email?.split('@')[0]}
+                                </span>
+                                <span className="text-xs text-muted-foreground truncate">
+                                    {user?.email}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </aside>
 
-                <main className="flex-1 overflow-auto p-4 md:p-6 pb-16 md:pb-0">
+                {/* Main Content */}
+                <main className="flex-1 overflow-auto pb-20 lg:pb-0">
                     {children}
                 </main>
             </div>
 
-            <nav className="fixed bottom-0 inset-x-0 md:hidden bg-card border-t flex justify-around py-2">
-                {navItems.map(({ name, href, icon }) => (
-                    <Link
-                        key={href}
-                        href={href}
-                        className={`flex flex-col items-center text-xs ${
-                            pathname === href
-                                ? "text-primary"
-                                : "text-muted-foreground"
-                        } hover:text-primary`}
-                    >
-                        {icon}
-                        <span className="mt-1">{name}</span>
-                    </Link>
-                ))}
+            {/* Mobile Bottom Navigation */}
+            <nav className="fixed bottom-0 inset-x-0 lg:hidden bg-card border-t safe-area-bottom z-50">
+                <div className="flex justify-around items-center h-16">
+                    {navItems.map(({ name, href, icon }) => (
+                        <Link
+                            key={href}
+                            href={href}
+                            className={`flex flex-col items-center justify-center gap-1 min-w-0 flex-1 py-2 transition-colors ${
+                                pathname === href
+                                    ? "text-primary"
+                                    : "text-muted-foreground"
+                            }`}
+                        >
+                            {icon}
+                            <span className="text-xs font-medium truncate px-1">{name.split(' ')[0]}</span>
+                        </Link>
+                    ))}
+                </div>
             </nav>
         </div>
     );

@@ -17,8 +17,9 @@ import {
     CreditCard,
     DollarSign,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency } from "@/lib/format";
+import { useUser } from "@/hooks/useUser";
 
 interface DashboardStats {
     totalIncome: number;
@@ -29,21 +30,15 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
+    const { user, supabase } = useUser();
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<{ id: string; email?: string; user_metadata?: { full_name?: string } } | null>(null);
-    const supabase = createClient();
 
     useEffect(() => {
-        const getUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            setUser(user);
-            if (user) {
-                await loadDashboardStats(user.id);
-            }
-        };
-        getUser();
-    }, [supabase.auth]);
+        if (user?.id) {
+            loadDashboardStats(user.id);
+        }
+    }, [user?.id]); // Only depend on user.id
 
     const loadDashboardStats = async (userId: string) => {
         try {
@@ -77,22 +72,20 @@ export default function DashboardPage() {
         }
     };
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('es-MX', {
-            style: 'currency',
-            currency: 'MXN'
-        }).format(amount);
-    };
 
-    if (loading || !user) {
+    if (loading || !stats) {
         return (
             <div className="kipo-dashboard-layout">
-                <div className="space-y-6">
-                    <Skeleton className="h-8 w-64" />
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="kipo-stack-lg">
+                    <Skeleton className="h-12 w-64" />
+                    <div className="kipo-grid-4">
                         {Array.from({ length: 4 }).map((_, i) => (
-                            <Skeleton key={i} className="h-32" />
+                            <Skeleton key={i} className="h-32 rounded-lg" />
                         ))}
+                    </div>
+                    <div className="kipo-grid-2">
+                        <Skeleton className="h-48 rounded-lg" />
+                        <Skeleton className="h-48 rounded-lg" />
                     </div>
                 </div>
             </div>
@@ -101,18 +94,19 @@ export default function DashboardPage() {
 
     return (
         <div className="kipo-dashboard-layout">
-            <div className="space-y-6">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-primary">
-                        Dashboard
-                    </h1>
-                    <p className="text-muted-foreground">
-                        Bienvenido de vuelta, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}
-                    </p>
+            <div className="kipo-stack-lg">
+                {/* Page Header */}
+                <div className="kipo-section-header">
+                    <div>
+                        <h1 className="kipo-page-title">Dashboard</h1>
+                        <p className="kipo-page-description">
+                            Bienvenido de vuelta, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}
+                        </p>
+                    </div>
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="kipo-grid-4">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">
@@ -173,53 +167,55 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="grid gap-4 md:grid-cols-2">
-                    <Card className="kipo-card">
-                        <CardHeader>
-                            <CardTitle className="text-lg">Acciones Rápidas</CardTitle>
-                            <CardDescription>
-                                Administra tus finanzas fácilmente
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            <Link href="/dashboard/transactions" className="block">
-                                <Button className="w-full justify-start gap-2">
-                                    <Plus className="h-4 w-4" />
-                                    Nueva Transacción
-                                </Button>
-                            </Link>
-                            <Link href="/dashboard/cards" className="block">
-                                <Button variant="outline" className="w-full justify-start gap-2">
-                                    <CreditCard className="h-4 w-4" />
-                                    Gestionar Tarjetas
-                                </Button>
-                            </Link>
-                        </CardContent>
-                    </Card>
+                {stats?.transactionCount !== 0 && (
+                    <div className="kipo-grid-2">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base sm:text-lg">Acciones Rápidas</CardTitle>
+                                <CardDescription>
+                                    Administra tus finanzas fácilmente
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-4">
+                                <Link href="/dashboard/transactions" className="block">
+                                    <Button className="w-full justify-start gap-2" size="default">
+                                        <Plus className="kipo-icon-sm" />
+                                        Nueva Transacción
+                                    </Button>
+                                </Link>
+                                <Link href="/dashboard/cards" className="block">
+                                    <Button variant="outline" className="w-full justify-start gap-2" size="default">
+                                        <CreditCard className="kipo-icon-sm" />
+                                        Gestionar Tarjetas
+                                    </Button>
+                                </Link>
+                            </CardContent>
+                        </Card>
 
-                    <Card className="kipo-card">
-                        <CardHeader>
-                            <CardTitle className="text-lg">Resumen del Mes</CardTitle>
-                            <CardDescription>
-                                {new Date().toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Transacciones:</span>
-                                    <span className="font-medium">{stats?.transactionCount || 0}</span>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base sm:text-lg">Resumen del Mes</CardTitle>
+                                <CardDescription>
+                                    {new Date().toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-muted-foreground">Transacciones:</span>
+                                        <span className="font-medium">{stats?.transactionCount || 0}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-muted-foreground">Promedio por día:</span>
+                                        <span className="font-medium">
+                                            {formatCurrency((stats?.totalExpenses || 0) / new Date().getDate())}
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-sm text-muted-foreground">Promedio por día:</span>
-                                    <span className="font-medium">
-                                        {formatCurrency((stats?.totalExpenses || 0) / new Date().getDate())}
-                                    </span>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
 
                 {/* Getting Started */}
                 {stats?.transactionCount === 0 && (
