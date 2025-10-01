@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Slide } from "@mui/material";
-import { CreditCard as DefaultCardIcon } from "lucide-react";
+import { CreditCard as DefaultCardIcon, DollarSign } from "lucide-react";
 import {
     SiVisa,
     SiMastercard,
@@ -12,8 +12,6 @@ import {
 import {
     Card,
     CardContent,
-    CardHeader,
-    CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,15 +23,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
     DropdownMenu,
@@ -63,8 +52,16 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card as CardType } from "@/types";
-import { createCardSchema, CreateCardInput } from "@/lib/validations/card";
+import { Card as BaseCardType } from "@/types";
+import { CreateCardInput } from "@/lib/validations/card";
+
+// Extended Card type with new payment fields
+type CardType = BaseCardType & {
+    interest_free_payment_amount?: number;
+    payment_due_date?: string | null;
+    statement_closing_date?: string | null;
+    reminder_days_before?: number;
+};
 import { toast } from "@/lib/toast";
 
 const CARD_BRANDS = [
@@ -90,6 +87,12 @@ export default function CardsPage() {
     const [actionLoading, setActionLoading] = useState<{ [key: string]: boolean }>({});
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [cardToDelete, setCardToDelete] = useState<string | null>(null);
+    const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+    const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+    const [editingPaymentCard, setEditingPaymentCard] = useState<CardType | null>(null);
+    const [paymentAmount, setPaymentAmount] = useState<number>(0);
+    const [isPaymentFocused, setIsPaymentFocused] = useState(false);
+    const [isFormPaymentFocused, setIsFormPaymentFocused] = useState(false);
     const supabase = createClient();
 
     const [formData, setFormData] = useState<CreateCardInput>({
@@ -98,6 +101,10 @@ export default function CardsPage() {
         brand: "visa",
         color: "#4F46E5",
         is_active: true,
+        interest_free_payment_amount: 0,
+        payment_due_date: null,
+        statement_closing_date: null,
+        reminder_days_before: 1,
     });
 
     useEffect(() => {
@@ -292,6 +299,10 @@ export default function CardsPage() {
             brand: "visa",
             color: "#4F46E5",
             is_active: true,
+            interest_free_payment_amount: 0,
+            payment_due_date: null,
+            statement_closing_date: null,
+            reminder_days_before: 1,
         });
         setEditingCard(null);
     };
@@ -304,8 +315,84 @@ export default function CardsPage() {
             brand: card.brand as "visa" | "mastercard" | "amex" | "discover" | "other",
             color: card.color || "#4F46E5",
             is_active: card.is_active ?? true,
+            interest_free_payment_amount: card.interest_free_payment_amount || 0,
+            payment_due_date: card.payment_due_date || null,
+            statement_closing_date: card.statement_closing_date || null,
+            reminder_days_before: card.reminder_days_before || 1,
         });
         setIsDialogOpen(true);
+    };
+
+    const openEditPaymentDialog = (card: CardType) => {
+        setEditingPaymentCard(card);
+        setPaymentAmount(card.interest_free_payment_amount || 0);
+        setIsPaymentDialogOpen(true);
+    };
+
+    const handleUpdatePayment = async () => {
+        if (!editingPaymentCard) return;
+
+        setIsSubmitting(true);
+
+        // Optimistic update
+        setCards(prevCards =>
+            prevCards.map(c =>
+                c.id === editingPaymentCard.id
+                    ? { ...c, interest_free_payment_amount: paymentAmount }
+                    : c
+            )
+        );
+
+        try {
+            const response = await fetch('/api/cards', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: editingPaymentCard.id,
+                    interest_free_payment_amount: paymentAmount,
+                }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to update payment amount');
+            }
+
+            const updatedCard = await response.json();
+
+            // Update with server response to ensure consistency
+            setCards(prevCards =>
+                prevCards.map(c =>
+                    c.id === updatedCard.id ? updatedCard : c
+                )
+            );
+
+            toast.success('Monto de pago actualizado correctamente');
+            setIsPaymentDialogOpen(false);
+            setEditingPaymentCard(null);
+        } catch (error) {
+            console.error('Error updating payment:', error);
+            // Revert optimistic update on error
+            if (user) await loadCards(user.id);
+            toast.error(error instanceof Error ? error.message : 'No se pudo actualizar el monto');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const formatNumberWithCommas = (value: number, includeCurrency = false): string => {
+        const formatted = new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(value);
+        return includeCurrency ? `$${formatted}` : formatted;
+    };
+
+    const formatNumber = (num: number): string => {
+        return new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(num);
     };
 
     const getBrandIcon = (brand: string) => {
@@ -434,8 +521,8 @@ export default function CardsPage() {
                                                 key={color}
                                                 type="button"
                                                 className={`w-10 h-10 rounded-full border-3 transition-all ${
-                                                    formData.color === color 
-                                                        ? 'border-primary scale-110 shadow-lg' 
+                                                    formData.color === color
+                                                        ? 'border-primary scale-110 shadow-lg'
                                                         : 'border-muted-foreground/20'
                                                 }`}
                                                 style={{ backgroundColor: color }}
@@ -444,6 +531,89 @@ export default function CardsPage() {
                                         ))}
                                     </div>
                                 </div>
+
+                                {/* Credit card payment fields */}
+                                {formData.card_type === 'credit' && (
+                                    <div className="space-y-4 pt-4 border-t border-muted-foreground/20">
+                                        <h3 className="text-sm font-semibold text-foreground">Información de Pago</h3>
+
+                                        <div className="space-y-3">
+                                            <Label htmlFor="interest_free_payment_amount" className="text-sm font-medium text-foreground">
+                                                Pago para no generar intereses
+                                            </Label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                                    $
+                                                </span>
+                                                <Input
+                                                    id="interest_free_payment_amount"
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    value={
+                                                        isFormPaymentFocused
+                                                            ? formData.interest_free_payment_amount?.toString() || '0'
+                                                            : formatNumberWithCommas(formData.interest_free_payment_amount || 0, false)
+                                                    }
+                                                    onChange={(e) => {
+                                                        const value = e.target.value.replace(/[^0-9.]/g, '');
+                                                        const numValue = parseFloat(value) || 0;
+                                                        setFormData({ ...formData, interest_free_payment_amount: numValue });
+                                                    }}
+                                                    onFocus={(e) => {
+                                                        setIsFormPaymentFocused(true);
+                                                        if (formData.interest_free_payment_amount === 0) {
+                                                            e.target.select();
+                                                        }
+                                                    }}
+                                                    onBlur={() => setIsFormPaymentFocused(false)}
+                                                    className="pl-8 h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-3">
+                                                <Label htmlFor="payment_due_date" className="text-sm font-medium text-foreground">
+                                                    Fecha límite de pago
+                                                </Label>
+                                                <Input
+                                                    id="payment_due_date"
+                                                    type="date"
+                                                    value={formData.payment_due_date || ''}
+                                                    onChange={(e) => setFormData({ ...formData, payment_due_date: e.target.value || null })}
+                                                    className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
+                                                />
+                                            </div>
+                                            <div className="space-y-3">
+                                                <Label htmlFor="statement_closing_date" className="text-sm font-medium text-foreground">
+                                                    Fecha de corte
+                                                </Label>
+                                                <Input
+                                                    id="statement_closing_date"
+                                                    type="date"
+                                                    value={formData.statement_closing_date || ''}
+                                                    onChange={(e) => setFormData({ ...formData, statement_closing_date: e.target.value || null })}
+                                                    className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <Label htmlFor="reminder_days_before" className="text-sm font-medium text-foreground">
+                                                Recordatorio (días antes)
+                                            </Label>
+                                            <Input
+                                                id="reminder_days_before"
+                                                type="number"
+                                                min="1"
+                                                max="30"
+                                                value={formData.reminder_days_before}
+                                                onChange={(e) => setFormData({ ...formData, reminder_days_before: parseInt(e.target.value) || 1 })}
+                                                className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Submit button */}
                                 <div className="pt-4 pb-6">
@@ -488,89 +658,289 @@ export default function CardsPage() {
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="kipo-grid-3">
-                        {cards.map((card) => (
-                            <Card
-                                key={card.id}
-                                className={`relative overflow-hidden transition-all ${
-                                    !card.is_active ? 'opacity-60' : ''
-                                }`}
-                            >
-                                <div
-                                    className="absolute inset-0 opacity-10"
-                                    style={{ backgroundColor: card.color || '#4F46E5' }}
-                                />
-                                <CardHeader className="relative pb-3">
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="flex-1 min-w-0">
-                                            <CardTitle className="text-base sm:text-lg truncate">{card.name}</CardTitle>
-                                            <p className="text-xs sm:text-sm text-muted-foreground capitalize">
-                                                {card.brand} • {card.card_type === 'credit' ? 'Crédito' : 'Débito'}
-                                            </p>
-                                        </div>
-                                        <Badge
-                                            variant={card.is_active ? "default" : "secondary"}
-                                            className="text-xs flex-shrink-0"
+                    <>
+                        {/* Mobile: Simple list with accordion */}
+                        <div className="md:hidden space-y-3">
+                            {cards.map((card) => {
+                                const isExpanded = expandedCardId === card.id;
+
+                                return (
+                                    <div
+                                        key={card.id}
+                                        className={`rounded-2xl overflow-hidden transition-all ${
+                                            !card.is_active ? 'opacity-60' : ''
+                                        }`}
+                                        style={{
+                                            background: `linear-gradient(135deg, ${card.color || '#4F46E5'} 0%, ${card.color || '#4F46E5'}dd 100%)`,
+                                        }}
+                                    >
+                                        {/* Card Header - Always visible */}
+                                        <div
+                                            className="p-4 cursor-pointer"
+                                            onClick={() => setExpandedCardId(isExpanded ? null : card.id)}
                                         >
-                                            {card.is_active ? 'Activa' : 'Inactiva'}
-                                        </Badge>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="relative">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex-shrink-0">
-                                            {getBrandIcon(card.brand)}
+                                            <div className="flex items-start justify-between text-white mb-3">
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2">
+                                                        {getBrandIcon(card.brand)}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <h3 className="font-bold truncate">{card.name}</h3>
+                                                            <Badge
+                                                                variant={card.is_active ? "secondary" : "outline"}
+                                                                className={`text-xs ${card.is_active ? 'bg-white/20 text-white border-0' : 'bg-white/10 text-white/70 border-white/30'}`}
+                                                            >
+                                                                {card.is_active ? 'Activa' : 'Inactiva'}
+                                                            </Badge>
+                                                        </div>
+                                                        <p className="text-sm text-white/80 capitalize">
+                                                            {card.brand} • {card.card_type === 'credit' ? 'Crédito' : 'Débito'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <svg
+                                                    className={`w-5 h-5 text-white/80 transition-transform flex-shrink-0 ${
+                                                        isExpanded ? 'rotate-180' : ''
+                                                    }`}
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={2}
+                                                        d="M19 9l-7 7-7-7"
+                                                    />
+                                                </svg>
+                                            </div>
+
+                                            {/* Payment Info Preview - Always visible for credit cards */}
+                                            {card.card_type === 'credit' && card.interest_free_payment_amount !== undefined && card.interest_free_payment_amount > 0 && (
+                                                <div className="bg-white/10 rounded-xl p-3 border border-white/20">
+                                                    <div className="flex items-center justify-between">
+                                                        <div>
+                                                            <p className="text-xs text-white/70">Pago sin intereses</p>
+                                                            <p className="text-lg font-bold text-white">
+                                                                ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(card.interest_free_payment_amount)}
+                                                            </p>
+                                                        </div>
+                                                        {card.payment_due_date && (
+                                                            <div className="text-right">
+                                                                <p className="text-xs text-white/70">Vence</p>
+                                                                <p className="text-sm font-semibold text-white">
+                                                                    {new Date(card.payment_due_date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
+
+                                        {/* Expandable Actions */}
+                                        <div
+                                            className={`transition-all duration-300 overflow-hidden ${
+                                                isExpanded ? 'max-h-96' : 'max-h-0'
+                                            }`}
+                                        >
+                                            <div className="px-4 pb-4 space-y-3">
+                                                {/* Payment Details - Expanded view for credit cards */}
+                                                {card.card_type === 'credit' && card.payment_due_date && (
+                                                    <div className="bg-white/10 rounded-xl p-3 border border-white/20 text-white text-sm">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <svg className="w-4 h-4 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                            </svg>
+                                                            <p className="text-white/80">
+                                                                {(() => {
+                                                                    const today = new Date();
+                                                                    const dueDate = new Date(card.payment_due_date);
+                                                                    const diffTime = dueDate.getTime() - today.getTime();
+                                                                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                                                                    if (diffDays < 0) return 'Vencido';
+                                                                    if (diffDays === 0) return 'Vence hoy';
+                                                                    if (diffDays === 1) return 'Vence mañana';
+                                                                    if (diffDays <= 7) return `Vence en ${diffDays} días`;
+                                                                    return `${diffDays} días restantes`;
+                                                                })()}
+                                                            </p>
+                                                        </div>
+                                                        {card.statement_closing_date && (
+                                                            <p className="text-xs text-white/70">
+                                                                Fecha de corte: {new Date(card.statement_closing_date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                <div className="space-y-2">
                                                 <Button
                                                     variant="ghost"
-                                                    size="icon"
-                                                    className="rounded-full focus-visible:ring-0 focus-visible:ring-offset-0"
-                                                    disabled={Object.values(actionLoading).some(loading => loading)}
+                                                    className="w-full justify-start bg-white/10 hover:bg-white/20 text-white"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        openEditDialog(card);
+                                                    }}
                                                 >
-                                                    <Ellipsis className="kipo-icon" />
+                                                    <Edit2 className="w-4 h-4 mr-2" />
+                                                    Editar tarjeta
                                                 </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-48">
-                                                <DropdownMenuItem
-                                                    onClick={() => openEditDialog(card)}
-                                                >
-                                                    <Edit2 className="kipo-icon-sm" />
-                                                    <span>Editar tarjeta</span>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => handleToggleActive(card)}
+                                                <Button
+                                                    variant="ghost"
+                                                    className="w-full justify-start bg-white/10 hover:bg-white/20 text-white"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleToggleActive(card);
+                                                    }}
                                                     disabled={actionLoading[`toggle-${card.id}`]}
                                                 >
                                                     {actionLoading[`toggle-${card.id}`] ? (
                                                         <>
-                                                            <Loader2 className="kipo-icon-sm animate-spin" />
-                                                            <span>Procesando...</span>
+                                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                            Procesando...
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <Power className="kipo-icon-sm" />
-                                                            <span>{card.is_active ? 'Desactivar' : 'Activar'}</span>
+                                                            <Power className="w-4 h-4 mr-2" />
+                                                            {card.is_active ? 'Desactivar' : 'Activar'}
                                                         </>
                                                     )}
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                    onClick={() => handleDeleteClick(card.id)}
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    className="w-full justify-start bg-white/10 hover:bg-white/20 text-red-200"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteClick(card.id);
+                                                    }}
                                                     disabled={actionLoading[`delete-${card.id}`]}
-                                                    className="text-destructive focus:text-destructive"
                                                 >
-                                                    <Trash2 className="kipo-icon-sm" />
-                                                    <span>Eliminar tarjeta</span>
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                                    <Trash2 className="w-4 h-4 mr-2" />
+                                                    Eliminar tarjeta
+                                                </Button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </CardContent>
-                            </Card>
+                                );
+                            })}
+                        </div>
+
+                        {/* Desktop: Gradient card design */}
+                        <div className="hidden md:grid kipo-grid-3">
+                            {cards.map((card) => (
+                                <div
+                                    key={card.id}
+                                    className={`relative overflow-hidden rounded-2xl transition-all hover:scale-[1.02] ${
+                                        !card.is_active ? 'opacity-60' : ''
+                                    }`}
+                                    style={{
+                                        background: `linear-gradient(135deg, ${card.color || '#4F46E5'} 0%, ${card.color || '#4F46E5'}dd 100%)`,
+                                    }}
+                                >
+                                    {/* Decorative elements */}
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+
+                                    {/* Card Content */}
+                                    <div className="relative p-5 text-white">
+                                        {/* Header */}
+                                        <div className="flex items-start justify-between mb-6">
+                                            <div className="flex-1 min-w-0">
+                                                <Badge
+                                                    variant={card.is_active ? "secondary" : "outline"}
+                                                    className={`text-xs mb-2 ${card.is_active ? 'bg-white/20 text-white border-0' : 'bg-white/10 text-white/70 border-white/30'}`}
+                                                >
+                                                    {card.is_active ? 'Activa' : 'Inactiva'}
+                                                </Badge>
+                                                <h3 className="text-lg font-bold truncate">{card.name}</h3>
+                                                <p className="text-xs text-white/80 capitalize">
+                                                    {card.brand} • {card.card_type === 'credit' ? 'Crédito' : 'Débito'}
+                                                </p>
+                                            </div>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="rounded-full hover:bg-white/20 text-white focus-visible:ring-0 focus-visible:ring-offset-0"
+                                                        disabled={Object.values(actionLoading).some(loading => loading)}
+                                                    >
+                                                        <Ellipsis className="kipo-icon" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-48">
+                                                    <DropdownMenuItem onClick={() => openEditDialog(card)}>
+                                                        <Edit2 className="kipo-icon-sm" />
+                                                        <span>Editar tarjeta</span>
+                                                    </DropdownMenuItem>
+                                                    {card.card_type === 'credit' && (
+                                                        <DropdownMenuItem onClick={() => openEditPaymentDialog(card)}>
+                                                            <DollarSign className="kipo-icon-sm" />
+                                                            <span>Editar pago</span>
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleToggleActive(card)}
+                                                        disabled={actionLoading[`toggle-${card.id}`]}
+                                                    >
+                                                        {actionLoading[`toggle-${card.id}`] ? (
+                                                            <>
+                                                                <Loader2 className="kipo-icon-sm animate-spin" />
+                                                                <span>Procesando...</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Power className="kipo-icon-sm" />
+                                                                <span>{card.is_active ? 'Desactivar' : 'Activar'}</span>
+                                                            </>
+                                                        )}
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleDeleteClick(card.id)}
+                                                        disabled={actionLoading[`delete-${card.id}`]}
+                                                        className="text-destructive focus:text-destructive"
+                                                    >
+                                                        <Trash2 className="kipo-icon-sm" />
+                                                        <span>Eliminar tarjeta</span>
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+
+                                        {/* Payment Info */}
+                                        {card.card_type === 'credit' && card.interest_free_payment_amount !== undefined && card.interest_free_payment_amount > 0 && (
+                                            <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 mb-4 border border-white/20">
+                                                <div className="flex items-start justify-between gap-3 mb-3">
+                                                    <div className="flex-1">
+                                                        <p className="text-xs text-white/80 mb-1">Pago para no generar intereses</p>
+                                                        <p className="text-2xl font-bold">
+                                                            ${formatNumber(card.interest_free_payment_amount)}
+                                                        </p>
+                                                    </div>
+                                                    {card.payment_due_date && (
+                                                        <div className="bg-white/25 backdrop-blur-md rounded-lg px-3 py-2 text-center border border-white/30 flex-shrink-0">
+                                                            <p className="text-[10px] text-white/90 uppercase font-semibold mb-0.5">Vence</p>
+                                                            <p className="text-lg font-bold leading-none">
+                                                                {new Date(card.payment_due_date).toLocaleDateString('es-MX', { day: 'numeric' })}
+                                                            </p>
+                                                            <p className="text-[10px] text-white/90 uppercase font-medium mt-0.5">
+                                                                {new Date(card.payment_due_date).toLocaleDateString('es-MX', { month: 'short' })}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                         ))}
-                    </div>
+                        </div>
+                    </>
                 )}
 
                 {/* Delete Confirmation Dialog */}
@@ -605,6 +975,87 @@ export default function CardsPage() {
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
+
+                {/* Edit Payment Dialog with Slide Animation */}
+                <Slide direction="up" in={isPaymentDialogOpen} mountOnEnter unmountOnExit>
+                    <div className="fixed inset-x-4 bottom-4 top-32 z-50 bg-background flex flex-col rounded-3xl shadow-2xl max-w-md mx-auto border">
+                        {/* Header with close button */}
+                        <div className="flex items-center justify-between p-4 border-b">
+                            <Button
+                                variant="ghost"
+                                onClick={() => setIsPaymentDialogOpen(false)}
+                                size="sm"
+                            >
+                                Cancelar
+                            </Button>
+                            <h1 className="text-lg font-semibold">
+                                Editar Monto de Pago
+                            </h1>
+                            <div className="w-20"></div> {/* Spacer for centering */}
+                        </div>
+
+                        {/* Scrollable content */}
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <p className="text-sm text-muted-foreground mb-6">
+                                Modifica manualmente el pago para no generar intereses de <span className="font-semibold">{editingPaymentCard?.name}</span>
+                            </p>
+
+                            <div className="space-y-4">
+                                <div className="space-y-3">
+                                    <Label htmlFor="payment_amount" className="text-sm font-medium text-foreground">
+                                        Monto de pago sin intereses
+                                    </Label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-lg">
+                                            $
+                                        </span>
+                                        <Input
+                                            id="payment_amount"
+                                            type="text"
+                                            inputMode="decimal"
+                                            value={isPaymentFocused ? paymentAmount.toString() : formatNumberWithCommas(paymentAmount, false)}
+                                            onChange={(e) => {
+                                                const value = e.target.value.replace(/[^0-9.]/g, '');
+                                                const numValue = parseFloat(value) || 0;
+                                                setPaymentAmount(numValue);
+                                            }}
+                                            onFocus={(e) => {
+                                                setIsPaymentFocused(true);
+                                                if (paymentAmount === 0) {
+                                                    e.target.select();
+                                                }
+                                            }}
+                                            onBlur={() => setIsPaymentFocused(false)}
+                                            className="pl-8 h-14 rounded-xl text-xl font-semibold border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
+                                        />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Nota: Este monto se calcula automáticamente basado en tus gastos, pero puedes modificarlo manualmente.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer with action button */}
+                        <div className="p-6 border-t">
+                            <Button
+                                onClick={handleUpdatePayment}
+                                disabled={isSubmitting}
+                                size="lg"
+                                className="w-full rounded-xl"
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="kipo-icon animate-spin" />
+                                        Actualizando...
+                                    </>
+                                ) : (
+                                    'Guardar Cambios'
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </Slide>
             </div>
         </div>
     );

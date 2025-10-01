@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createCardSchema } from '@/lib/validations/card';
+import { createCardSchema, updateCardSchema } from '@/lib/validations/card';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,7 +74,7 @@ export async function PUT(request: NextRequest) {
         }
 
         const { id, ...updateData } = await request.json();
-        
+
         if (!id) {
             return NextResponse.json(
                 { error: 'Card ID is required' },
@@ -82,9 +82,9 @@ export async function PUT(request: NextRequest) {
             );
         }
 
-        // Validate the data
-        const validatedData = createCardSchema.parse(updateData);
-        
+        // Validate the data (use updateCardSchema for partial updates)
+        const validatedData = updateCardSchema.parse(updateData);
+
         // Update the card
         const { data, error: updateError } = await supabase
             .from('cards')
