@@ -69,6 +69,26 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Create notification preferences for the new user
+        const { error: notifPrefError } = await adminSupabase
+            .from('notification_preferences')
+            .insert({
+                user_id: authData.user.id,
+                email_address: email,
+                push_enabled: true,
+                email_enabled: true,
+                whatsapp_enabled: false,
+                default_reminder_days: 3,
+                quiet_hours_start: '22:00:00',
+                quiet_hours_end: '08:00:00',
+                timezone: 'America/Mexico_City',
+            });
+
+        if (notifPrefError) {
+            console.error('Notification preferences creation error:', notifPrefError);
+            // Don't fail registration, just log the error
+        }
+
         return NextResponse.json({
             message: 'User created successfully',
             user: {

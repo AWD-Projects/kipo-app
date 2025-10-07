@@ -30,12 +30,16 @@ import {
     ExternalLink,
     Smartphone,
     AlertCircle,
+    Bell,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { createClient } from "@/lib/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiKeyResponse, CreateApiKeyResponse } from "@/types";
 import Link from "next/link";
 import WhatsAppLinkCard from "./_components/WhatsAppLinkCard";
+import PushNotificationSetup from "./_components/PushNotificationSetup";
+import { toast } from "@/lib/toast";
 
 export default function SettingsPage() {
     const [apiKeys, setApiKeys] = useState<ApiKeyResponse[]>([]);
@@ -47,6 +51,7 @@ export default function SettingsPage() {
     const [keyName, setKeyName] = useState("iOS Shortcut Token");
     const [user, setUser] = useState<{ id: string; email?: string; user_metadata?: { full_name?: string } } | null>(null);
     const [profile, setProfile] = useState<{ full_name?: string; currency?: string; language?: string; timezone?: string } | null>(null);
+    const [notificationPrefs, setNotificationPrefs] = useState<{ push_enabled: boolean; email_enabled: boolean } | null>(null);
     const supabase = createClient();
 
     useEffect(() => {
@@ -56,7 +61,8 @@ export default function SettingsPage() {
             if (user) {
                 await Promise.all([
                     loadApiKeys(),
-                    loadProfile(user.id)
+                    loadProfile(user.id),
+                    loadNotificationPreferences(user.id)
                 ]);
             }
         };
@@ -91,10 +97,58 @@ export default function SettingsPage() {
             if (error && error.code !== 'PGRST116') { // Ignore not found error
                 throw error;
             }
-            
+
             setProfile(data);
         } catch (error) {
             console.error('Error loading profile:', error);
+        }
+    };
+
+    const loadNotificationPreferences = async (userId: string) => {
+        try {
+            const { data, error } = await supabase
+                .from('notification_preferences')
+                .select('push_enabled, email_enabled')
+                .eq('user_id', userId)
+                .single();
+
+            if (error && error.code !== 'PGRST116') {
+                throw error;
+            }
+
+            setNotificationPrefs(data || { push_enabled: true, email_enabled: true });
+        } catch (error) {
+            console.error('Error loading notification preferences:', error);
+            setNotificationPrefs({ push_enabled: true, email_enabled: true });
+        }
+    };
+
+    const handleToggleNotification = async (type: 'push' | 'email', enabled: boolean) => {
+        if (!user) return;
+
+        try {
+            const { error } = await supabase
+                .from('notification_preferences')
+                .upsert({
+                    user_id: user.id,
+                    [type === 'push' ? 'push_enabled' : 'email_enabled']: enabled,
+                }, {
+                    onConflict: 'user_id'
+                });
+
+            if (error) throw error;
+
+            setNotificationPrefs(prev => ({
+                ...prev!,
+                [type === 'push' ? 'push_enabled' : 'email_enabled']: enabled
+            }));
+
+            const notificationType = type === 'push' ? 'Push' : 'Email';
+            const action = enabled ? 'activadas' : 'desactivadas';
+            toast.success(`Notificaciones ${notificationType} ${action}: Los recordatorios de pago por ${type === 'push' ? 'notificación push' : 'correo electrónico'} han sido ${action}.`);
+        } catch (error) {
+            console.error('Error updating notification preferences:', error);
+            toast.error('Error al actualizar las preferencias: No se pudieron guardar los cambios en las notificaciones.');
         }
     };
 
@@ -232,6 +286,55 @@ export default function SettingsPage() {
                                 <Label>Zona horaria</Label>
                                 <div className="text-sm mt-1">{profile?.timezone || 'America/Mexico_City'}</div>
                             </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Notification Settings */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                            <Bell className="kipo-icon" />
+                            Notificaciones
+                        </CardTitle>
+                        <CardDescription>
+                            Configura cómo y cuándo quieres recibir notificaciones de recordatorios de pago
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="push-notifications">Notificaciones Push</Label>
+                                <p className="text-sm text-muted-foreground">
+                                    Recibe recordatorios de pago en tu navegador
+                                </p>
+                            </div>
+                            <Switch
+                                id="push-notifications"
+                                checked={notificationPrefs?.push_enabled ?? true}
+                                onCheckedChange={(checked) => handleToggleNotification('push', checked)}
+                            />
+                        </div>
+
+                        {/* Push Notification Setup */}
+                        {notificationPrefs?.push_enabled && (
+                            <div className="pt-4 border-t">
+                                <PushNotificationSetup />
+                            </div>
+                        )}
+
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="email-notifications">Notificaciones por Email</Label>
+                                <p className="text-sm text-muted-foreground">
+                                    Recibe recordatorios de pago en tu correo electrónico
+                                </p>
+                            </div>
+                            <Switch
+                                id="email-notifications"
+                                checked={notificationPrefs?.email_enabled ?? true}
+                                onCheckedChange={(checked) => handleToggleNotification('email', checked)}
+                            />
                         </div>
                     </CardContent>
                 </Card>

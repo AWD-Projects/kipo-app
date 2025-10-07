@@ -105,6 +105,7 @@ export default function CardsPage() {
         payment_due_date: null,
         statement_closing_date: null,
         reminder_days_before: 1,
+        reminder_time: "09:00",
     });
 
     useEffect(() => {
@@ -303,6 +304,7 @@ export default function CardsPage() {
             payment_due_date: null,
             statement_closing_date: null,
             reminder_days_before: 1,
+            reminder_time: "09:00",
         });
         setEditingCard(null);
     };
@@ -319,6 +321,7 @@ export default function CardsPage() {
             payment_due_date: card.payment_due_date || null,
             statement_closing_date: card.statement_closing_date || null,
             reminder_days_before: card.reminder_days_before || 1,
+            reminder_time: (card as any).reminder_time || "09:00",
         });
         setIsDialogOpen(true);
     };
@@ -598,19 +601,33 @@ export default function CardsPage() {
                                             </div>
                                         </div>
 
-                                        <div className="space-y-3">
-                                            <Label htmlFor="reminder_days_before" className="text-sm font-medium text-foreground">
-                                                Recordatorio (días antes)
-                                            </Label>
-                                            <Input
-                                                id="reminder_days_before"
-                                                type="number"
-                                                min="1"
-                                                max="30"
-                                                value={formData.reminder_days_before}
-                                                onChange={(e) => setFormData({ ...formData, reminder_days_before: parseInt(e.target.value) || 1 })}
-                                                className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
-                                            />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-3">
+                                                <Label htmlFor="reminder_days_before" className="text-sm font-medium text-foreground">
+                                                    Días antes
+                                                </Label>
+                                                <Input
+                                                    id="reminder_days_before"
+                                                    type="number"
+                                                    min="1"
+                                                    max="30"
+                                                    value={formData.reminder_days_before}
+                                                    onChange={(e) => setFormData({ ...formData, reminder_days_before: parseInt(e.target.value) || 1 })}
+                                                    className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
+                                                />
+                                            </div>
+                                            <div className="space-y-3">
+                                                <Label htmlFor="reminder_time" className="text-sm font-medium text-foreground">
+                                                    Hora
+                                                </Label>
+                                                <Input
+                                                    id="reminder_time"
+                                                    type="time"
+                                                    value={formData.reminder_time || '09:00'}
+                                                    onChange={(e) => setFormData({ ...formData, reminder_time: e.target.value })}
+                                                    className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 )}

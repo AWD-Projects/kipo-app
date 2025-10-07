@@ -14,10 +14,14 @@ import { Button } from "@/components/ui/button";
 import { PageLoadingState } from "@/components/ui/loading-state";
 import { ReactNode } from "react";
 import { useUser } from "@/hooks/useUser";
+import { useServiceWorker } from "@/hooks/useServiceWorker";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const { user, loading, router, supabase } = useUser();
     const pathname = usePathname();
+
+    // Register service worker for push notifications
+    useServiceWorker();
 
     // Redirect if not authenticated
     if (!loading && !user) {
