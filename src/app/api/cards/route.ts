@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createCardSchema, updateCardSchema } from '@/lib/validations/card';
+import { createCardPaymentNotification, cancelCardNotifications } from '@/lib/notifications/createCardNotification';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,9 @@ export async function POST(request: NextRequest) {
                 { status: 500 }
             );
         }
+
+        // Create notification job for credit card payment reminders
+        await createCardPaymentNotification(data);
 
         return NextResponse.json(data);
 
@@ -100,6 +104,22 @@ export async function PUT(request: NextRequest) {
                 { error: 'Failed to update card' },
                 { status: 500 }
             );
+        }
+
+        // If payment-related fields were updated, recreate notification
+        const paymentFieldsUpdated =
+            'payment_due_date' in validatedData ||
+            'interest_free_payment_amount' in validatedData ||
+            'reminder_days_before' in validatedData ||
+            'reminder_time' in validatedData ||
+            'is_active' in validatedData;
+
+        if (paymentFieldsUpdated) {
+            // Cancel old notifications
+            await cancelCardNotifications(id);
+
+            // Create new notification if applicable
+            await createCardPaymentNotification(data);
         }
 
         return NextResponse.json(data);
