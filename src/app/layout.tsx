@@ -3,6 +3,7 @@ import { Quicksand } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "sonner";
+import { RegisterServiceWorker } from "./register-sw";
 
 // Carga Quicksand con pesos que necesites
 const fontQuicksand = Quicksand({
@@ -20,6 +21,7 @@ export const metadata: Metadata = {
         "Kipo te ayuda a controlar gastos, establecer metas de ahorro y recibir recomendaciones inteligentes basadas en IA. Gestiona tu dinero de forma sencilla, segura y visual.",
     icons: {
         icon: "/favicon.png",
+        apple: "/icons/icon-192x192.png",
     },
     keywords: [
         "finanzas personales",
@@ -35,6 +37,16 @@ export const metadata: Metadata = {
         { name: "Amoxtli Web Developers", url: "https://www.amoxtli.tech" },
     ],
     creator: "Amoxtli Web Developers",
+    manifest: "/manifest.json",
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: "default",
+        title: "Kipo",
+    },
+    applicationName: "Kipo",
+    formatDetection: {
+        telephone: false,
+    },
 };
 
 export const viewport: Viewport = {
@@ -62,6 +74,7 @@ export default function RootLayout({
                     "font-sans"
                 )}
             >
+                <RegisterServiceWorker />
                 {children}
                 <Toaster />
             </body>
