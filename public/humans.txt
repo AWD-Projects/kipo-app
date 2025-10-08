@@ -1,0 +1,26 @@
+# humanstxt.org/
+# The humans responsible & technology colophon
+
+# TEAM
+
+    Developer: Amoxtli Web Developers
+    Location: Mexico
+    Contact: hola [at] kipo.app
+
+# THANKS
+
+    To all our users who help us improve Kipo every day
+
+# TECHNOLOGY COLOPHON
+
+    Next.js 15
+    React 19
+    TypeScript 5
+    Tailwind CSS
+    Supabase
+    Firebase Cloud Messaging
+    SendGrid
+    Anthropic Claude AI
+    Twilio WhatsApp
+
+# BUILT WITH ❤️ IN MEXICO

@@ -1,0 +1,31 @@
+# robots.txt for Kipo
+# https://kipo.app/robots.txt
+
+User-agent: *
+Allow: /
+Allow: /dashboard
+Allow: /docs/*
+Disallow: /api/*
+Disallow: /dashboard/settings
+
+# Sitemaps
+Sitemap: https://kipo.app/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 1
+
+# Google Bot
+User-agent: Googlebot
+Allow: /
+Allow: /dashboard
+Allow: /docs/*
+Disallow: /api/*
+Disallow: /dashboard/settings
+
+# Bing Bot
+User-agent: Bingbot
+Allow: /
+Allow: /dashboard
+Allow: /docs/*
+Disallow: /api/*
+Disallow: /dashboard/settings

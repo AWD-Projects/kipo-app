@@ -62,9 +62,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     ];
 
     return (
-        <div className="flex flex-col h-screen bg-background">
-            {/* Header */}
-            <header className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 bg-card border-b">
+        <div className="flex flex-col h-screen bg-background overflow-hidden">
+            {/* Header with safe area */}
+            <header className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 bg-card border-b safe-area-top">
                 <Link href="/" className="flex items-center">
                     <Image
                         src="/logo.png"
@@ -127,14 +127,18 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     </div>
                 </aside>
 
-                {/* Main Content */}
-                <main className="flex-1 overflow-auto pb-20 lg:pb-0">
+                {/* Main Content - proper mobile spacing */}
+                <main className="flex-1 overflow-y-auto overflow-x-hidden lg:pb-0" style={{
+                    paddingBottom: 'calc(4rem + env(safe-area-inset-bottom))'
+                }}>
                     {children}
                 </main>
             </div>
 
-            {/* Mobile Bottom Navigation */}
-            <nav className="fixed bottom-0 inset-x-0 lg:hidden bg-card border-t safe-area-bottom z-50">
+            {/* Mobile Bottom Navigation with safe area */}
+            <nav className="fixed bottom-0 inset-x-0 lg:hidden bg-card border-t z-50" style={{
+                paddingBottom: 'env(safe-area-inset-bottom)'
+            }}>
                 <div className="flex justify-around items-center h-16">
                     {navItems.map(({ name, href, icon }) => (
                         <Link
