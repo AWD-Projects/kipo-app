@@ -69,6 +69,8 @@ import { formatCurrency, parseCurrency } from "@/lib/format";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { useUser } from "@/hooks/useUser";
 import { LoadingState } from "@/components/ui/loading-state";
+import { DatePicker } from "@/components/ui/date-picker";
+import { format } from "date-fns";
 
 type TransactionWithCard = Transaction & {
     cards?: {
@@ -464,13 +466,13 @@ export default function TransactionsPage() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-3">
                                         <Label htmlFor="date" className="text-sm font-medium text-foreground">Fecha</Label>
-                                        <Input
-                                            id="date"
-                                            type="date"
+                                        <DatePicker
                                             value={formData.transaction_date}
-                                            onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
-                                            required
-                                            className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
+                                            onChange={(date) => setFormData({
+                                                ...formData,
+                                                transaction_date: date ? format(date, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0]
+                                            })}
+                                            placeholder="Selecciona fecha"
                                         />
                                     </div>
                                     <div className="space-y-3">
@@ -531,7 +533,7 @@ export default function TransactionsPage() {
                             placeholder="Buscar transacciones..."
                             value={filters.search}
                             onChange={(e) => setFilters({...filters, search: e.target.value})}
-                            className="pl-9 h-9"
+                            className="pl-9 h-12"
                         />
                     </div>
 
@@ -541,7 +543,7 @@ export default function TransactionsPage() {
                             value={filters.category}
                             onValueChange={(value) => setFilters({...filters, category: value})}
                         >
-                            <SelectTrigger size="sm">
+                            <SelectTrigger className="h-12">
                                 <SelectValue placeholder="Categoría" />
                             </SelectTrigger>
                             <SelectContent>
@@ -561,7 +563,7 @@ export default function TransactionsPage() {
                             value={filters.cardId}
                             onValueChange={(value) => setFilters({...filters, cardId: value})}
                         >
-                            <SelectTrigger size="sm">
+                            <SelectTrigger className="h-12">
                                 <SelectValue placeholder="Tarjeta" />
                             </SelectTrigger>
                             <SelectContent>
@@ -581,7 +583,7 @@ export default function TransactionsPage() {
                             placeholder="Mín."
                             value={filters.minAmount ? parseFloat(filters.minAmount) : 0}
                             onValueChange={(value) => setFilters({...filters, minAmount: value > 0 ? value.toString() : ""})}
-                            className="h-8"
+                            className="h-10"
                         />
                     </div>
 
@@ -591,7 +593,7 @@ export default function TransactionsPage() {
                             placeholder="Máx."
                             value={filters.maxAmount ? parseFloat(filters.maxAmount) : 0}
                             onValueChange={(value) => setFilters({...filters, maxAmount: value > 0 ? value.toString() : ""})}
-                            className="h-8"
+                            className="h-10"
                         />
                     </div>
 
@@ -600,7 +602,7 @@ export default function TransactionsPage() {
                         variant="ghost"
                         size="icon"
                         onClick={clearFilters}
-                        className="h-9 w-9 flex-shrink-0"
+                        className="h-10 w-10 flex-shrink-0 active:scale-95 transition-transform"
                         title="Limpiar filtros"
                     >
                         <X className="kipo-icon-sm" />

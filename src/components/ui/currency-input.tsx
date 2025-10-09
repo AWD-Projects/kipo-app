@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Input } from "@/components/ui/input";
-import { formatInputCurrency, parseCurrency } from "@/lib/format";
+import { formatInputCurrency, parseCurrency, getCurrencySymbol } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export interface CurrencyInputProps
@@ -10,11 +10,13 @@ export interface CurrencyInputProps
   value?: number | string;
   onValueChange?: (value: number) => void;
   showSymbol?: boolean;
+  currency?: string;
 }
 
 const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
-  ({ className, value, onValueChange, showSymbol = true, ...props }, ref) => {
+  ({ className, value, onValueChange, showSymbol = true, currency = 'MXN', ...props }, ref) => {
     const [displayValue, setDisplayValue] = React.useState("");
+    const currencySymbol = getCurrencySymbol(currency);
 
     // Update display value when prop value changes
     React.useEffect(() => {
@@ -36,8 +38,8 @@ const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
         return;
       }
 
-      // Remove currency symbol if present
-      const cleanedInput = inputValue.replace(/^\$/, "");
+      // Remove currency symbols if present (handle multiple symbol types)
+      const cleanedInput = inputValue.replace(/^[$€£R\s]+/, "");
 
       // Format the input
       const formatted = formatInputCurrency(cleanedInput);
@@ -67,7 +69,7 @@ const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
       <div className="relative">
         {showSymbol && displayValue && (
           <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground pointer-events-none">
-            $
+            {currencySymbol}
           </span>
         )}
         <Input

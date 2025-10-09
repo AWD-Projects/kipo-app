@@ -13,7 +13,7 @@ export const createCardSchema = z.object({
   interest_free_payment_amount: z.number().min(0, "El monto debe ser mayor o igual a 0").nullable().optional().default(0),
   payment_due_date: z.string().nullable().optional(),
   statement_closing_date: z.string().nullable().optional(),
-  reminder_days_before: z.number().min(1, "Los días de recordatorio deben ser al menos 1").max(30, "Los días de recordatorio no pueden ser más de 30").optional().default(1),
+  reminder_days_before: z.number().min(0, "Los días de recordatorio deben ser al menos 0").max(30, "Los días de recordatorio no pueden ser más de 30").optional().default(0),
   reminder_time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/, "Hora inválida").optional().default("09:00"),
 });
 
@@ -31,7 +31,7 @@ export const updateCardSchema = z.object({
   interest_free_payment_amount: z.number().min(0, "El monto debe ser mayor o igual a 0").optional(),
   payment_due_date: z.string().optional().nullable(),
   statement_closing_date: z.string().optional().nullable(),
-  reminder_days_before: z.number().min(1, "Los días de recordatorio deben ser al menos 1").max(30, "Los días de recordatorio no pueden ser más de 30").optional(),
+  reminder_days_before: z.number().min(0, "Los días de recordatorio deben ser al menos 0").max(30, "Los días de recordatorio no pueden ser más de 30").optional(),
   reminder_time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/, "Hora inválida").optional(),
 });
 

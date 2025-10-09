@@ -54,6 +54,8 @@ import { createClient } from "@/lib/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card as BaseCardType } from "@/types";
 import { CreateCardInput } from "@/lib/validations/card";
+import { TimePicker } from "@/components/ui/time-picker";
+import { format } from "date-fns";
 
 // Extended Card type with new payment fields
 type CardType = BaseCardType & {
@@ -63,6 +65,7 @@ type CardType = BaseCardType & {
     reminder_days_before?: number;
 };
 import { toast } from "@/lib/toast";
+import { DatePicker } from "@/components/ui/date-picker";
 
 const CARD_BRANDS = [
     { value: "visa", label: "Visa" },
@@ -104,7 +107,7 @@ export default function CardsPage() {
         interest_free_payment_amount: 0,
         payment_due_date: null,
         statement_closing_date: null,
-        reminder_days_before: 1,
+        reminder_days_before: 0,
         reminder_time: "09:00",
     });
 
@@ -142,6 +145,12 @@ export default function CardsPage() {
 
         setIsSubmitting(true);
         try {
+            // Ensure interest_free_payment_amount is always a number (0 if empty/undefined)
+            const sanitizedFormData = {
+                ...formData,
+                interest_free_payment_amount: formData.interest_free_payment_amount || 0
+            };
+
             if (editingCard) {
                 // Update existing card
                 const response = await fetch('/api/cards', {
@@ -151,7 +160,7 @@ export default function CardsPage() {
                     },
                     body: JSON.stringify({
                         id: editingCard.id,
-                        ...formData,
+                        ...sanitizedFormData,
                     }),
                 });
 
@@ -174,7 +183,7 @@ export default function CardsPage() {
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(formData),
+                    body: JSON.stringify(sanitizedFormData),
                 });
 
                 if (!response.ok) {
@@ -303,7 +312,7 @@ export default function CardsPage() {
             interest_free_payment_amount: 0,
             payment_due_date: null,
             statement_closing_date: null,
-            reminder_days_before: 1,
+            reminder_days_before: 0,
             reminder_time: "09:00",
         });
         setEditingCard(null);
@@ -320,7 +329,7 @@ export default function CardsPage() {
             interest_free_payment_amount: card.interest_free_payment_amount || 0,
             payment_due_date: card.payment_due_date || null,
             statement_closing_date: card.statement_closing_date || null,
-            reminder_days_before: card.reminder_days_before || 1,
+            reminder_days_before: card.reminder_days_before ?? 0,
             reminder_time: (card as any).reminder_time || "09:00",
         });
         setIsDialogOpen(true);
@@ -399,19 +408,19 @@ export default function CardsPage() {
     };
 
     const getBrandIcon = (brand: string) => {
-        const iconClass = "h-10 w-10";
+        const iconClass = "h-10 w-10 text-white";
 
         switch (brand.toLowerCase()) {
             case 'visa':
-                return <SiVisa className={`${iconClass} text-[#1A1F71]`} />;
+                return <SiVisa className={iconClass} />;
             case 'mastercard':
-                return <SiMastercard className={`${iconClass} text-[#EB001B]`} />;
+                return <SiMastercard className={iconClass} />;
             case 'amex':
-                return <SiAmericanexpress className={`${iconClass} text-[#006FCF]`} />;
+                return <SiAmericanexpress className={iconClass} />;
             case 'discover':
-                return <SiDiscover className={`${iconClass} text-[#FF6000]`} />;
+                return <SiDiscover className={iconClass} />;
             default:
-                return <DefaultCardIcon className="h-8 w-8 text-muted-foreground" />;
+                return <DefaultCardIcon className="h-8 w-8 text-white" />;
         }
     };
 
@@ -523,7 +532,7 @@ export default function CardsPage() {
                                             <button
                                                 key={color}
                                                 type="button"
-                                                className={`w-10 h-10 rounded-full border-3 transition-all ${
+                                                className={`w-12 h-12 rounded-full border-3 transition-all active:scale-95 ${
                                                     formData.color === color
                                                         ? 'border-primary scale-110 shadow-lg'
                                                         : 'border-muted-foreground/20'
@@ -579,24 +588,26 @@ export default function CardsPage() {
                                                 <Label htmlFor="payment_due_date" className="text-sm font-medium text-foreground">
                                                     Fecha límite de pago
                                                 </Label>
-                                                <Input
-                                                    id="payment_due_date"
-                                                    type="date"
-                                                    value={formData.payment_due_date || ''}
-                                                    onChange={(e) => setFormData({ ...formData, payment_due_date: e.target.value || null })}
-                                                    className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
+                                                <DatePicker
+                                                    value={formData.payment_due_date || undefined}
+                                                    onChange={(date: Date | undefined) => setFormData({
+                                                        ...formData,
+                                                        payment_due_date: date ? format(date, 'yyyy-MM-dd') : null
+                                                    })}
+                                                    placeholder="Selecciona fecha"
                                                 />
                                             </div>
                                             <div className="space-y-3">
                                                 <Label htmlFor="statement_closing_date" className="text-sm font-medium text-foreground">
                                                     Fecha de corte
                                                 </Label>
-                                                <Input
-                                                    id="statement_closing_date"
-                                                    type="date"
-                                                    value={formData.statement_closing_date || ''}
-                                                    onChange={(e) => setFormData({ ...formData, statement_closing_date: e.target.value || null })}
-                                                    className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
+                                                <DatePicker
+                                                    value={formData.statement_closing_date || undefined}
+                                                    onChange={(date: Date | undefined) => setFormData({
+                                                        ...formData,
+                                                        statement_closing_date: date ? format(date, 'yyyy-MM-dd') : null
+                                                    })}
+                                                    placeholder="Selecciona fecha"
                                                 />
                                             </div>
                                         </div>
@@ -609,23 +620,34 @@ export default function CardsPage() {
                                                 <Input
                                                     id="reminder_days_before"
                                                     type="number"
-                                                    min="1"
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
+                                                    min="0"
                                                     max="30"
-                                                    value={formData.reminder_days_before}
-                                                    onChange={(e) => setFormData({ ...formData, reminder_days_before: parseInt(e.target.value) || 1 })}
+                                                    value={formData.reminder_days_before === 0 ? '' : formData.reminder_days_before}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        if (value === '') {
+                                                            setFormData({ ...formData, reminder_days_before: 0 });
+                                                        } else {
+                                                            const numValue = parseInt(value);
+                                                            if (!isNaN(numValue) && numValue >= 0 && numValue <= 30) {
+                                                                setFormData({ ...formData, reminder_days_before: numValue });
+                                                            }
+                                                        }
+                                                    }}
                                                     className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
+                                                    placeholder="0 = Sin recordatorio"
                                                 />
                                             </div>
                                             <div className="space-y-3">
                                                 <Label htmlFor="reminder_time" className="text-sm font-medium text-foreground">
                                                     Hora
                                                 </Label>
-                                                <Input
-                                                    id="reminder_time"
-                                                    type="time"
+                                                <TimePicker
                                                     value={formData.reminder_time || '09:00'}
-                                                    onChange={(e) => setFormData({ ...formData, reminder_time: e.target.value })}
-                                                    className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
+                                                    onChange={(time) => setFormData({ ...formData, reminder_time: time })}
+                                                    placeholder="Selecciona hora"
                                                 />
                                             </div>
                                         </div>
@@ -734,21 +756,25 @@ export default function CardsPage() {
                                             </div>
 
                                             {/* Payment Info Preview - Always visible for credit cards */}
-                                            {card.card_type === 'credit' && card.interest_free_payment_amount !== undefined && card.interest_free_payment_amount > 0 && (
+                                            {card.card_type === 'credit' && (
                                                 <div className="bg-white/10 rounded-xl p-3 border border-white/20">
                                                     <div className="flex items-center justify-between">
                                                         <div>
                                                             <p className="text-xs text-white/70">Pago sin intereses</p>
                                                             <p className="text-lg font-bold text-white">
-                                                                ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(card.interest_free_payment_amount)}
+                                                                ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(card.interest_free_payment_amount || 0)}
                                                             </p>
                                                         </div>
-                                                        {card.payment_due_date && (
+                                                        {card.payment_due_date ? (
                                                             <div className="text-right">
                                                                 <p className="text-xs text-white/70">Vence</p>
                                                                 <p className="text-sm font-semibold text-white">
                                                                     {new Date(card.payment_due_date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
                                                                 </p>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-right">
+                                                                <p className="text-xs text-white/70">Sin fecha</p>
                                                             </div>
                                                         )}
                                                     </div>
@@ -866,17 +892,22 @@ export default function CardsPage() {
                                     <div className="relative p-5 text-white">
                                         {/* Header */}
                                         <div className="flex items-start justify-between mb-6">
-                                            <div className="flex-1 min-w-0">
-                                                <Badge
-                                                    variant={card.is_active ? "secondary" : "outline"}
-                                                    className={`text-xs mb-2 ${card.is_active ? 'bg-white/20 text-white border-0' : 'bg-white/10 text-white/70 border-white/30'}`}
-                                                >
-                                                    {card.is_active ? 'Activa' : 'Inactiva'}
-                                                </Badge>
-                                                <h3 className="text-lg font-bold truncate">{card.name}</h3>
-                                                <p className="text-xs text-white/80 capitalize">
-                                                    {card.brand} • {card.card_type === 'credit' ? 'Crédito' : 'Débito'}
-                                                </p>
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2 flex-shrink-0">
+                                                    {getBrandIcon(card.brand)}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <Badge
+                                                        variant={card.is_active ? "secondary" : "outline"}
+                                                        className={`text-xs mb-2 ${card.is_active ? 'bg-white/20 text-white border-0' : 'bg-white/10 text-white/70 border-white/30'}`}
+                                                    >
+                                                        {card.is_active ? 'Activa' : 'Inactiva'}
+                                                    </Badge>
+                                                    <h3 className="text-lg font-bold truncate">{card.name}</h3>
+                                                    <p className="text-xs text-white/80 capitalize">
+                                                        {card.brand} • {card.card_type === 'credit' ? 'Crédito' : 'Débito'}
+                                                    </p>
+                                                </div>
                                             </div>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
@@ -930,16 +961,16 @@ export default function CardsPage() {
                                         </div>
 
                                         {/* Payment Info */}
-                                        {card.card_type === 'credit' && card.interest_free_payment_amount !== undefined && card.interest_free_payment_amount > 0 && (
+                                        {card.card_type === 'credit' && (
                                             <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 mb-4 border border-white/20">
                                                 <div className="flex items-start justify-between gap-3 mb-3">
                                                     <div className="flex-1">
                                                         <p className="text-xs text-white/80 mb-1">Pago para no generar intereses</p>
                                                         <p className="text-2xl font-bold">
-                                                            ${formatNumber(card.interest_free_payment_amount)}
+                                                            ${formatNumber(card.interest_free_payment_amount || 0)}
                                                         </p>
                                                     </div>
-                                                    {card.payment_due_date && (
+                                                    {card.payment_due_date ? (
                                                         <div className="bg-white/25 backdrop-blur-md rounded-lg px-3 py-2 text-center border border-white/30 flex-shrink-0">
                                                             <p className="text-[10px] text-white/90 uppercase font-semibold mb-0.5">Vence</p>
                                                             <p className="text-lg font-bold leading-none">
@@ -948,6 +979,10 @@ export default function CardsPage() {
                                                             <p className="text-[10px] text-white/90 uppercase font-medium mt-0.5">
                                                                 {new Date(card.payment_due_date).toLocaleDateString('es-MX', { month: 'short' })}
                                                             </p>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="bg-white/25 backdrop-blur-md rounded-lg px-3 py-2 text-center border border-white/30 flex-shrink-0">
+                                                            <p className="text-[10px] text-white/90 uppercase font-semibold">Sin fecha</p>
                                                         </div>
                                                     )}
                                                 </div>
