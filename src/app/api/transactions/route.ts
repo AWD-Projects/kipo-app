@@ -1,25 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-async function updateCardPaymentAmount(supabase: any, cardId: string, userId: string) {
-    // Calculate total expenses for the card
-    const { data: transactions } = await supabase
-        .from('transactions')
-        .select('amount')
-        .eq('card_id', cardId)
-        .eq('type', 'expense')
-        .eq('user_id', userId);
-
-    const totalExpenses = transactions?.reduce((sum: number, t: any) => sum + t.amount, 0) || 0;
-
-    // Update the card
-    await supabase
-        .from('cards')
-        .update({ interest_free_payment_amount: totalExpenses })
-        .eq('id', cardId)
-        .eq('user_id', userId);
-}
-
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient();
@@ -61,7 +42,23 @@ export async function POST(request: NextRequest) {
 
         // Update card payment amount if it's an expense linked to a card
         if (data.type === 'expense' && data.card_id) {
-            await updateCardPaymentAmount(supabase, data.card_id, user.id);
+            // Get the current card amount
+            const { data: card } = await supabase
+                .from('cards')
+                .select('interest_free_payment_amount')
+                .eq('id', data.card_id)
+                .eq('user_id', user.id)
+                .single();
+
+            // ADD the new expense to the existing amount instead of recalculating
+            const currentAmount = card?.interest_free_payment_amount || 0;
+            const newAmount = currentAmount + data.amount;
+
+            await supabase
+                .from('cards')
+                .update({ interest_free_payment_amount: newAmount })
+                .eq('id', data.card_id)
+                .eq('user_id', user.id);
         }
 
         return NextResponse.json(data);
@@ -98,10 +95,10 @@ export async function PUT(request: NextRequest) {
             );
         }
 
-        // Get the old transaction data to check if card_id changed
+        // Get the old transaction data BEFORE updating (including amount)
         const { data: oldTransaction } = await supabase
             .from('transactions')
-            .select('card_id, type')
+            .select('card_id, type, amount')
             .eq('id', id)
             .eq('user_id', user.id)
             .single();
@@ -130,14 +127,65 @@ export async function PUT(request: NextRequest) {
         }
 
         // Update card payment amounts if needed
-        if (data.type === 'expense') {
-            // Update old card if it changed
-            if (oldTransaction?.card_id && oldTransaction.card_id !== data.card_id) {
-                await updateCardPaymentAmount(supabase, oldTransaction.card_id, user.id);
+        if (data.type === 'expense' || oldTransaction?.type === 'expense') {
+            // If card_id changed, we need to:
+            // 1. Subtract from old card (if it was an expense)
+            // 2. Add to new card (if it's an expense)
+
+            // Handle old card - subtract the old amount
+            if (oldTransaction?.card_id && oldTransaction.card_id !== data.card_id && oldTransaction.type === 'expense') {
+                const { data: oldCard } = await supabase
+                    .from('cards')
+                    .select('interest_free_payment_amount')
+                    .eq('id', oldTransaction.card_id)
+                    .eq('user_id', user.id)
+                    .single();
+
+                // Use the old transaction amount we fetched earlier
+                const oldAmount = oldCard?.interest_free_payment_amount || 0;
+                const newOldCardAmount = Math.max(0, oldAmount - oldTransaction.amount);
+
+                await supabase
+                    .from('cards')
+                    .update({ interest_free_payment_amount: newOldCardAmount })
+                    .eq('id', oldTransaction.card_id)
+                    .eq('user_id', user.id);
             }
-            // Update new card
-            if (data.card_id) {
-                await updateCardPaymentAmount(supabase, data.card_id, user.id);
+
+            // Handle new card - add the new amount
+            if (data.card_id && data.type === 'expense') {
+                const { data: newCard } = await supabase
+                    .from('cards')
+                    .select('interest_free_payment_amount')
+                    .eq('id', data.card_id)
+                    .eq('user_id', user.id)
+                    .single();
+
+                // If card didn't change but amount did, we need to adjust
+                if (oldTransaction?.card_id === data.card_id) {
+                    // Same card, different amount - adjust the difference
+                    // Use the old amount we already fetched before the update
+                    const currentAmount = newCard?.interest_free_payment_amount || 0;
+                    const oldTxAmount = oldTransaction?.amount || 0;
+                    const difference = data.amount - oldTxAmount;
+                    const newAmount = currentAmount + difference;
+
+                    await supabase
+                        .from('cards')
+                        .update({ interest_free_payment_amount: Math.max(0, newAmount) })
+                        .eq('id', data.card_id)
+                        .eq('user_id', user.id);
+                } else {
+                    // Different card, just add the new amount
+                    const currentAmount = newCard?.interest_free_payment_amount || 0;
+                    const newAmount = currentAmount + data.amount;
+
+                    await supabase
+                        .from('cards')
+                        .update({ interest_free_payment_amount: newAmount })
+                        .eq('id', data.card_id)
+                        .eq('user_id', user.id);
+                }
             }
         }
 

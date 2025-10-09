@@ -15,7 +15,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/lib/toast";
 
@@ -25,6 +25,7 @@ export default function LoginPage() {
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const supabase = createClient();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -105,7 +106,9 @@ export default function LoginPage() {
                                 </div>
                             )}
                             <div className="space-y-2">
-                                <Label htmlFor="email">Email</Label>
+                                <Label htmlFor="email">
+                                    Email <span className="text-destructive">*</span>
+                                </Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -113,19 +116,41 @@ export default function LoginPage() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
+                                    aria-required="true"
                                     disabled={isLoading}
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="password">Contraseña</Label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                    disabled={isLoading}
-                                />
+                                <Label htmlFor="password">
+                                    Contraseña <span className="text-destructive">*</span>
+                                </Label>
+                                <div className="relative">
+                                    <Input
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                        aria-required="true"
+                                        disabled={isLoading}
+                                        className="pr-10"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        disabled={isLoading}
+                                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                        ) : (
+                                            <Eye className="h-4 w-4 text-muted-foreground" />
+                                        )}
+                                    </Button>
+                                </div>
                             </div>
                         </CardContent>
                         <CardFooter className="flex flex-col space-y-4 pt-6">

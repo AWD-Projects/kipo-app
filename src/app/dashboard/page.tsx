@@ -16,10 +16,21 @@ import {
     TrendingDown,
     CreditCard,
     DollarSign,
+    BarChart3,
+    PieChart,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/format";
 import { useUser } from "@/hooks/useUser";
+import { IncomeExpensesChart } from "@/components/charts/IncomeExpensesChart";
+import { CategoryChart } from "@/components/charts/CategoryChart";
+
+interface Transaction {
+    type: "income" | "expense";
+    amount: number;
+    transaction_date: string;
+    category: string;
+}
 
 interface DashboardStats {
     totalIncome: number;
@@ -32,6 +43,7 @@ interface DashboardStats {
 export default function DashboardPage() {
     const { user, supabase } = useUser();
     const [stats, setStats] = useState<DashboardStats | null>(null);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -42,11 +54,12 @@ export default function DashboardPage() {
 
     const loadDashboardStats = async (userId: string) => {
         try {
-            // Get transactions stats
-            const { data: transactions } = await supabase
+            // Get transactions stats with all necessary data for charts
+            const { data: transactionsData } = await supabase
                 .from('transactions')
-                .select('type, amount')
-                .eq('user_id', userId);
+                .select('type, amount, transaction_date, category')
+                .eq('user_id', userId)
+                .order('transaction_date', { ascending: false });
 
             // Get cards count
             const { data: cards } = await supabase
@@ -55,14 +68,15 @@ export default function DashboardPage() {
                 .eq('user_id', userId)
                 .eq('is_active', true);
 
-            const totalIncome = transactions?.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0) || 0;
-            const totalExpenses = transactions?.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0) || 0;
+            const totalIncome = transactionsData?.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0) || 0;
+            const totalExpenses = transactionsData?.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0) || 0;
 
+            setTransactions(transactionsData || []);
             setStats({
                 totalIncome,
                 totalExpenses,
                 balance: totalIncome - totalExpenses,
-                transactionCount: transactions?.length || 0,
+                transactionCount: transactionsData?.length || 0,
                 cardCount: cards?.length || 0,
             });
         } catch (error) {
@@ -165,6 +179,41 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
                 </div>
+
+                {/* Charts Section */}
+                {stats?.transactionCount !== 0 && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                                    <BarChart3 className="h-5 w-5 text-primary" />
+                                    Ingresos vs Gastos
+                                </CardTitle>
+                                <CardDescription>
+                                    Tendencia de tus finanzas en el tiempo
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <IncomeExpensesChart transactions={transactions} />
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                                    <PieChart className="h-5 w-5 text-primary" />
+                                    Gastos por Categoría
+                                </CardTitle>
+                                <CardDescription>
+                                    Distribución de tus gastos
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <CategoryChart transactions={transactions} />
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
 
                 {/* Quick Actions */}
                 {stats?.transactionCount !== 0 && (

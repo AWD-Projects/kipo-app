@@ -1,24 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-async function updateCardPaymentAmount(supabase: any, cardId: string, userId: string) {
-    // Calculate total expenses for the card
-    const { data: transactions } = await supabase
-        .from('transactions')
-        .select('amount')
-        .eq('card_id', cardId)
-        .eq('type', 'expense')
-        .eq('user_id', userId);
-
-    const totalExpenses = transactions?.reduce((sum: number, t: any) => sum + t.amount, 0) || 0;
-
-    // Update the card
-    await supabase
-        .from('cards')
-        .update({ interest_free_payment_amount: totalExpenses })
-        .eq('id', cardId)
-        .eq('user_id', userId);
-}
 
 export async function DELETE(
     request: NextRequest,
@@ -42,7 +24,7 @@ export async function DELETE(
         // Get the transaction data before deleting to update card if needed
         const { data: transaction } = await supabase
             .from('transactions')
-            .select('card_id, type')
+            .select('card_id, type, amount')
             .eq('id', transactionId)
             .eq('user_id', user.id)
             .single();
@@ -63,8 +45,23 @@ export async function DELETE(
         }
 
         // Update card payment amount if the transaction was an expense linked to a card
+        // SUBTRACT the deleted expense from the card total
         if (transaction?.type === 'expense' && transaction.card_id) {
-            await updateCardPaymentAmount(supabase, transaction.card_id, user.id);
+            const { data: card } = await supabase
+                .from('cards')
+                .select('interest_free_payment_amount')
+                .eq('id', transaction.card_id)
+                .eq('user_id', user.id)
+                .single();
+
+            const currentAmount = card?.interest_free_payment_amount || 0;
+            const newAmount = Math.max(0, currentAmount - transaction.amount);
+
+            await supabase
+                .from('cards')
+                .update({ interest_free_payment_amount: newAmount })
+                .eq('id', transaction.card_id)
+                .eq('user_id', user.id);
         }
 
         return NextResponse.json({ success: true });

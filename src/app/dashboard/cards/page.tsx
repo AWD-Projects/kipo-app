@@ -476,27 +476,33 @@ export default function CardsPage() {
                             <div className="flex-1 overflow-y-auto">
                                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
                                 <div className="space-y-3">
-                                    <Label htmlFor="name" className="text-sm font-medium text-foreground">Nombre de la tarjeta</Label>
+                                    <Label htmlFor="name" className="text-sm font-medium text-foreground">
+                                        Nombre de la tarjeta <span className="text-destructive">*</span>
+                                    </Label>
                                     <Input
                                         id="name"
                                         placeholder="Ej: Tarjeta Principal"
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         required
+                                        aria-required="true"
                                         className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-3">
-                                        <Label htmlFor="type" className="text-sm font-medium text-foreground">Tipo</Label>
+                                        <Label htmlFor="type" className="text-sm font-medium text-foreground">
+                                            Tipo <span className="text-destructive">*</span>
+                                        </Label>
                                         <Select
                                             value={formData.card_type}
-                                            onValueChange={(value: "credit" | "debit") => 
+                                            onValueChange={(value: "credit" | "debit") =>
                                                 setFormData({ ...formData, card_type: value })
                                             }
+                                            required
                                         >
-                                            <SelectTrigger className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background">
+                                            <SelectTrigger className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background" aria-required="true">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent className="rounded-xl">
@@ -506,12 +512,15 @@ export default function CardsPage() {
                                         </Select>
                                     </div>
                                     <div className="space-y-3">
-                                        <Label htmlFor="brand" className="text-sm font-medium text-foreground">Marca</Label>
+                                        <Label htmlFor="brand" className="text-sm font-medium text-foreground">
+                                            Marca <span className="text-destructive">*</span>
+                                        </Label>
                                         <Select
                                             value={formData.brand}
                                             onValueChange={(value) => setFormData({ ...formData, brand: value as "visa" | "mastercard" | "amex" | "discover" | "other" })}
+                                            required
                                         >
-                                            <SelectTrigger className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background">
+                                            <SelectTrigger className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background" aria-required="true">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent className="rounded-xl">
@@ -526,7 +535,9 @@ export default function CardsPage() {
                                 </div>
 
                                 <div className="space-y-3">
-                                    <Label className="text-sm font-medium text-foreground">Color de la tarjeta</Label>
+                                    <Label className="text-sm font-medium text-foreground">
+                                        Color de la tarjeta <span className="text-destructive">*</span>
+                                    </Label>
                                     <div className="flex space-x-3 justify-center">
                                         {CARD_COLORS.map((color) => (
                                             <button
@@ -539,6 +550,8 @@ export default function CardsPage() {
                                                 }`}
                                                 style={{ backgroundColor: color }}
                                                 onClick={() => setFormData({ ...formData, color })}
+                                                aria-label={`Seleccionar color ${color}`}
+                                                aria-pressed={formData.color === color}
                                             />
                                         ))}
                                     </div>

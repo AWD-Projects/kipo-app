@@ -376,12 +376,16 @@ export default function SettingsPage() {
                                         </DialogHeader>
                                         <div className="space-y-4">
                                             <div className="space-y-2">
-                                                <Label htmlFor="keyName">Nombre del token</Label>
+                                                <Label htmlFor="keyName">
+                                                    Nombre del token <span className="text-destructive">*</span>
+                                                </Label>
                                                 <Input
                                                     id="keyName"
                                                     value={keyName}
                                                     onChange={(e) => setKeyName(e.target.value)}
                                                     placeholder="Ej: iPhone Shortcuts"
+                                                    required
+                                                    aria-required="true"
                                                 />
                                             </div>
                                         </div>

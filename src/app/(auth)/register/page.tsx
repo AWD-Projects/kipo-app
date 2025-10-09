@@ -15,7 +15,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/lib/toast";
 
@@ -29,6 +29,8 @@ export default function RegisterPage() {
     });
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const supabase = createClient();
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -138,7 +140,9 @@ export default function RegisterPage() {
                                 </div>
                             )}
                             <div className="space-y-2">
-                                <Label htmlFor="fullName">Nombre completo</Label>
+                                <Label htmlFor="fullName">
+                                    Nombre completo <span className="text-destructive">*</span>
+                                </Label>
                                 <Input
                                     id="fullName"
                                     name="fullName"
@@ -147,11 +151,14 @@ export default function RegisterPage() {
                                     value={formData.fullName}
                                     onChange={handleChange}
                                     required
+                                    aria-required="true"
                                     disabled={isLoading}
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="email">Email</Label>
+                                <Label htmlFor="email">
+                                    Email <span className="text-destructive">*</span>
+                                </Label>
                                 <Input
                                     id="email"
                                     name="email"
@@ -160,34 +167,77 @@ export default function RegisterPage() {
                                     value={formData.email}
                                     onChange={handleChange}
                                     required
+                                    aria-required="true"
                                     disabled={isLoading}
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="password">Contraseña</Label>
-                                <Input
-                                    id="password"
-                                    name="password"
-                                    type="password"
-                                    placeholder="Mínimo 6 caracteres"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    required
-                                    disabled={isLoading}
-                                />
+                                <Label htmlFor="password">
+                                    Contraseña <span className="text-destructive">*</span>
+                                </Label>
+                                <div className="relative">
+                                    <Input
+                                        id="password"
+                                        name="password"
+                                        type={showPassword ? "text" : "password"}
+                                        placeholder="Mínimo 6 caracteres"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        required
+                                        aria-required="true"
+                                        disabled={isLoading}
+                                        className="pr-10"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        disabled={isLoading}
+                                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                        ) : (
+                                            <Eye className="h-4 w-4 text-muted-foreground" />
+                                        )}
+                                    </Button>
+                                </div>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
-                                <Input
-                                    id="confirmPassword"
-                                    name="confirmPassword"
-                                    type="password"
-                                    placeholder="Repite tu contraseña"
-                                    value={formData.confirmPassword}
-                                    onChange={handleChange}
-                                    required
-                                    disabled={isLoading}
-                                />
+                                <Label htmlFor="confirmPassword">
+                                    Confirmar contraseña <span className="text-destructive">*</span>
+                                </Label>
+                                <div className="relative">
+                                    <Input
+                                        id="confirmPassword"
+                                        name="confirmPassword"
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        placeholder="Repite tu contraseña"
+                                        value={formData.confirmPassword}
+                                        onChange={handleChange}
+                                        required
+                                        aria-required="true"
+                                        disabled={isLoading}
+                                        className="pr-10"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        disabled={isLoading}
+                                        aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                                    >
+                                        {showConfirmPassword ? (
+                                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                        ) : (
+                                            <Eye className="h-4 w-4 text-muted-foreground" />
+                                        )}
+                                    </Button>
+                                </div>
                             </div>
                         </CardContent>
                         <CardFooter className="flex flex-col space-y-4 pt-6">

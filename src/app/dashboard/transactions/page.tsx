@@ -388,27 +388,33 @@ export default function TransactionsPage() {
                             <div className="flex-1 overflow-y-auto">
                                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
                                 <div className="space-y-3">
-                                    <Label htmlFor="title" className="text-sm font-medium text-foreground">Título</Label>
+                                    <Label htmlFor="title" className="text-sm font-medium text-foreground">
+                                        Título <span className="text-destructive">*</span>
+                                    </Label>
                                     <Input
                                         id="title"
                                         placeholder="Ej: Almuerzo, Café, Salario..."
                                         value={formData.title}
                                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                         required
+                                        aria-required="true"
                                         className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-3">
-                                        <Label htmlFor="type" className="text-sm font-medium text-foreground">Tipo</Label>
+                                        <Label htmlFor="type" className="text-sm font-medium text-foreground">
+                                            Tipo <span className="text-destructive">*</span>
+                                        </Label>
                                         <Select
                                             value={formData.type}
-                                            onValueChange={(value: "income" | "expense") => 
+                                            onValueChange={(value: "income" | "expense") =>
                                                 setFormData({ ...formData, type: value, category: "" })
                                             }
+                                            required
                                         >
-                                            <SelectTrigger className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background">
+                                            <SelectTrigger className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background" aria-required="true">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent className="rounded-xl">
@@ -418,7 +424,9 @@ export default function TransactionsPage() {
                                         </Select>
                                     </div>
                                     <div className="space-y-3">
-                                        <Label htmlFor="amount" className="text-sm font-medium text-foreground">Monto</Label>
+                                        <Label htmlFor="amount" className="text-sm font-medium text-foreground">
+                                            Monto <span className="text-destructive">*</span>
+                                        </Label>
                                         <CurrencyInput
                                             id="amount"
                                             placeholder="0.00"
@@ -428,18 +436,22 @@ export default function TransactionsPage() {
                                                 amount: value
                                             })}
                                             required
+                                            aria-required="true"
                                             className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background transition-colors"
                                         />
                                     </div>
                                 </div>
 
                                 <div className="space-y-3">
-                                    <Label htmlFor="category" className="text-sm font-medium text-foreground">Categoría</Label>
+                                    <Label htmlFor="category" className="text-sm font-medium text-foreground">
+                                        Categoría <span className="text-destructive">*</span>
+                                    </Label>
                                     <Select
                                         value={formData.category}
                                         onValueChange={(value) => setFormData({ ...formData, category: value })}
+                                        required
                                     >
-                                        <SelectTrigger className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background">
+                                        <SelectTrigger className="h-12 rounded-xl border-muted-foreground/20 bg-muted/30 focus:bg-background" aria-required="true">
                                             <SelectValue placeholder="Selecciona una categoría" />
                                         </SelectTrigger>
                                         <SelectContent className="rounded-xl">
@@ -465,7 +477,9 @@ export default function TransactionsPage() {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-3">
-                                        <Label htmlFor="date" className="text-sm font-medium text-foreground">Fecha</Label>
+                                        <Label htmlFor="date" className="text-sm font-medium text-foreground">
+                                            Fecha <span className="text-destructive">*</span>
+                                        </Label>
                                         <DatePicker
                                             value={formData.transaction_date}
                                             onChange={(date) => setFormData({
