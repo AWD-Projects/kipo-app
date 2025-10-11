@@ -10,12 +10,15 @@ import {
     DollarSign,
     Settings,
     FileText,
+    MailOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageLoadingState } from "@/components/ui/loading-state";
 import { ReactNode } from "react";
 import { useUser } from "@/hooks/useUser";
 import { useServiceWorker } from "@/hooks/useServiceWorker";
+import { AIChatButton } from "@/components/ai-chat-button";
+import { BudgetAlertsBadge } from "@/components/budget-alerts-badge";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const { user, loading, router, supabase } = useUser();
@@ -51,6 +54,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             icon: <DollarSign className="h-5 w-5" />,
         },
         {
+            name: "Sobres",
+            href: "/dashboard/sobres",
+            icon: <MailOpen className="h-5 w-5" />,
+        },
+        {
             name: "Tarjetas",
             href: "/dashboard/cards",
             icon: <CreditCard className="h-5 w-5" />,
@@ -80,15 +88,18 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         className="h-10 w-auto"
                     />
                 </Link>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                    onClick={handleSignOut}
-                >
-                    <LogOut className="kipo-icon-sm" />
-                    <span className="hidden sm:inline">Cerrar sesión</span>
-                </Button>
+                <div className="flex items-center gap-2">
+                    <BudgetAlertsBadge />
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                        onClick={handleSignOut}
+                    >
+                        <LogOut className="kipo-icon-sm" />
+                        <span className="hidden sm:inline">Cerrar sesión</span>
+                    </Button>
+                </div>
             </header>
 
             <div className="flex flex-1 overflow-hidden">
@@ -140,6 +151,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     {children}
                 </main>
             </div>
+
+            {/* AI Chat Button - Global Floating Button */}
+            <AIChatButton />
 
             {/* Mobile Bottom Navigation with safe area */}
             <nav className="fixed bottom-0 inset-x-0 lg:hidden bg-card border-t z-50" style={{

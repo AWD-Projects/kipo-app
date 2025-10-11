@@ -10,12 +10,21 @@ export async function POST(request: NextRequest) {
 
         if (authError || !user) {
             return NextResponse.json(
-                { error: 'Unauthorized' },
+                { error: 'No autorizado' },
                 { status: 401 }
             );
         }
 
-        const body = await request.json();
+        let body;
+        try {
+            body = await request.json();
+        } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            return NextResponse.json(
+                { error: 'Formato de datos inválido' },
+                { status: 400 }
+            );
+        }
 
         // Prepare transaction data
         const transactionData = {
@@ -35,7 +44,11 @@ export async function POST(request: NextRequest) {
         if (insertError) {
             console.error('Insert error:', insertError);
             return NextResponse.json(
-                { error: 'Failed to create transaction' },
+                {
+                    error: 'Error al crear transacción',
+                    message: insertError.message,
+                    details: insertError.details
+                },
                 { status: 500 }
             );
         }
@@ -63,10 +76,13 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json(data);
 
-    } catch (error) {
-        console.error('API error:', error);
+    } catch (error: any) {
+        console.error('API error (POST):', error);
         return NextResponse.json(
-            { error: 'Internal server error' },
+            {
+                error: 'Error interno del servidor',
+                message: error?.message || 'Error desconocido'
+            },
             { status: 500 }
         );
     }
@@ -81,16 +97,27 @@ export async function PUT(request: NextRequest) {
 
         if (authError || !user) {
             return NextResponse.json(
-                { error: 'Unauthorized' },
+                { error: 'No autorizado' },
                 { status: 401 }
             );
         }
 
-        const { id, ...updateData } = await request.json();
+        let body;
+        try {
+            body = await request.json();
+        } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            return NextResponse.json(
+                { error: 'Formato de datos inválido' },
+                { status: 400 }
+            );
+        }
+
+        const { id, ...updateData } = body;
 
         if (!id) {
             return NextResponse.json(
-                { error: 'Transaction ID is required' },
+                { error: 'Se requiere el ID de la transacción' },
                 { status: 400 }
             );
         }
@@ -121,7 +148,11 @@ export async function PUT(request: NextRequest) {
         if (updateError) {
             console.error('Update error:', updateError);
             return NextResponse.json(
-                { error: 'Failed to update transaction' },
+                {
+                    error: 'Error al actualizar transacción',
+                    message: updateError.message,
+                    details: updateError.details
+                },
                 { status: 500 }
             );
         }
@@ -191,10 +222,13 @@ export async function PUT(request: NextRequest) {
 
         return NextResponse.json(data);
 
-    } catch (error) {
-        console.error('API error:', error);
+    } catch (error: any) {
+        console.error('API error (PUT):', error);
         return NextResponse.json(
-            { error: 'Internal server error' },
+            {
+                error: 'Error interno del servidor',
+                message: error?.message || 'Error desconocido'
+            },
             { status: 500 }
         );
     }

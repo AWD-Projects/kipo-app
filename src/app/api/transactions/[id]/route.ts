@@ -14,7 +14,7 @@ export async function DELETE(
 
         if (authError || !user) {
             return NextResponse.json(
-                { error: 'Unauthorized' },
+                { error: 'No autorizado' },
                 { status: 401 }
             );
         }
@@ -39,7 +39,11 @@ export async function DELETE(
         if (deleteError) {
             console.error('Delete error:', deleteError);
             return NextResponse.json(
-                { error: 'Failed to delete transaction' },
+                {
+                    error: 'Error al eliminar transacción',
+                    message: deleteError.message,
+                    details: deleteError.details
+                },
                 { status: 500 }
             );
         }
@@ -66,10 +70,13 @@ export async function DELETE(
 
         return NextResponse.json({ success: true });
 
-    } catch (error) {
-        console.error('API error:', error);
+    } catch (error: any) {
+        console.error('API error (DELETE):', error);
         return NextResponse.json(
-            { error: 'Internal server error' },
+            {
+                error: 'Error interno del servidor',
+                message: error?.message || 'Error desconocido'
+            },
             { status: 500 }
         );
     }

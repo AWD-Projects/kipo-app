@@ -102,6 +102,13 @@ export default function TransactionsPage() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
 
+    // Helper para formatear fechas sin timezone issues
+    const formatTransactionDate = (dateString: string, options?: Intl.DateTimeFormatOptions) => {
+        const [year, month, day] = dateString.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        return date.toLocaleDateString('es-MX', options || { month: 'short', day: 'numeric' });
+    };
+
     // Estados para filtros
     const [activeTab, setActiveTab] = useState<"all" | "income" | "expense">("all");
     const [filters, setFilters] = useState({
@@ -193,8 +200,16 @@ export default function TransactionsPage() {
                 });
 
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to update transaction');
+                    let errorMessage = 'Error al actualizar transacción';
+                    try {
+                        const error = await response.json();
+                        errorMessage = error.error || error.message || errorMessage;
+                    } catch (e) {
+                        // Si no es JSON válido, usar el texto de la respuesta
+                        const text = await response.text();
+                        errorMessage = text || errorMessage;
+                    }
+                    throw new Error(errorMessage);
                 }
 
                 toast.success("Transacción actualizada: Los datos de la transacción se han actualizado correctamente.");
@@ -209,8 +224,16 @@ export default function TransactionsPage() {
                 });
 
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to create transaction');
+                    let errorMessage = 'Error al crear transacción';
+                    try {
+                        const error = await response.json();
+                        errorMessage = error.error || error.message || errorMessage;
+                    } catch (e) {
+                        // Si no es JSON válido, usar el texto de la respuesta
+                        const text = await response.text();
+                        errorMessage = text || errorMessage;
+                    }
+                    throw new Error(errorMessage);
                 }
 
                 toast.success("Transacción creada: La nueva transacción se ha agregado exitosamente.");
@@ -219,6 +242,22 @@ export default function TransactionsPage() {
             await loadTransactions(user.id);
             resetForm();
             setIsDialogOpen(false);
+
+            // Check for budget alerts if this was an expense transaction
+            if (formData.type === 'expense') {
+                try {
+                    await fetch('/api/budgets/alerts', {
+                        method: 'POST',
+                    });
+                    // Refresh the badge counter
+                    if (typeof window !== 'undefined' && (window as any).refreshBudgetAlerts) {
+                        (window as any).refreshBudgetAlerts();
+                    }
+                } catch (error) {
+                    // Silently fail - las alertas no son críticas
+                    console.log('Error checking budget alerts:', error);
+                }
+            }
         } catch (error) {
             console.error('Error saving transaction:', error);
             toast.error(`Error: ${error instanceof Error ? error.message : "No se pudo guardar la transacción."}`);
@@ -238,14 +277,25 @@ export default function TransactionsPage() {
         const actionKey = `delete-${transactionToDelete}`;
         setActionLoading(prev => ({ ...prev, [actionKey]: true }));
 
+        // Find the transaction to check if it was an expense
+        const transactionToDeleteData = transactions.find(t => t.id === transactionToDelete);
+
         try {
             const response = await fetch(`/api/transactions/${transactionToDelete}`, {
                 method: 'DELETE',
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to delete transaction');
+                let errorMessage = 'Error al eliminar transacción';
+                try {
+                    const error = await response.json();
+                    errorMessage = error.error || error.message || errorMessage;
+                } catch (e) {
+                    // Si no es JSON válido, usar el texto de la respuesta
+                    const text = await response.text();
+                    errorMessage = text || errorMessage;
+                }
+                throw new Error(errorMessage);
             }
 
             toast.success("Transacción eliminada: La transacción se ha eliminado correctamente.");
@@ -253,6 +303,18 @@ export default function TransactionsPage() {
             if (user) await loadTransactions(user.id);
             setDeleteDialogOpen(false);
             setTransactionToDelete(null);
+
+            // Check for budget alerts if this was an expense transaction
+            if (transactionToDeleteData?.type === 'expense') {
+                try {
+                    await fetch('/api/budgets/alerts', {
+                        method: 'POST',
+                    });
+                } catch (error) {
+                    // Silently fail - las alertas no son críticas
+                    console.log('Error checking budget alerts:', error);
+                }
+            }
         } catch (error) {
             console.error('Error deleting transaction:', error);
             toast.error(`Error: ${error instanceof Error ? error.message : "No se pudo eliminar la transacción."}`);
@@ -681,7 +743,7 @@ export default function TransactionsPage() {
                                                     )}
                                                 </p>
                                                 <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                                                    <span>{new Date(transaction.transaction_date).toLocaleDateString('es-MX', { month: 'short', day: 'numeric' })}</span>
+                                                    <span>{formatTransactionDate(transaction.transaction_date)}</span>
                                                     {transaction.cards && (
                                                         <>
                                                             <span className="hidden sm:inline">•</span>
@@ -769,7 +831,7 @@ export default function TransactionsPage() {
                                                         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                                                             <span>{transaction.category}</span>
                                                             <span>•</span>
-                                                            <span>{new Date(transaction.transaction_date).toLocaleDateString()}</span>
+                                                            <span>{formatTransactionDate(transaction.transaction_date)}</span>
                                                             {transaction.cards && (
                                                                 <>
                                                                     <span>•</span>
@@ -854,7 +916,7 @@ export default function TransactionsPage() {
                                                         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                                                             <span>{transaction.category}</span>
                                                             <span>•</span>
-                                                            <span>{new Date(transaction.transaction_date).toLocaleDateString()}</span>
+                                                            <span>{formatTransactionDate(transaction.transaction_date)}</span>
                                                             {transaction.cards && (
                                                                 <>
                                                                     <span>•</span>
