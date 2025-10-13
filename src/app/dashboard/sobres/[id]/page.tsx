@@ -28,6 +28,7 @@ import {
 import { formatCurrency } from "@/lib/format";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
+import { parseLocalDate } from "@/lib/dateUtils";
 
 interface Transaction {
   id: string;
@@ -246,11 +247,11 @@ export default function BudgetDetailPage() {
                 <div>
                   <CardTitle className="text-2xl">{budget.category}</CardTitle>
                   <CardDescription className="mt-1">
-                    {budget.start_date && !isNaN(new Date(budget.start_date).getTime())
-                      ? new Date(budget.start_date).toLocaleDateString('es-MX')
+                    {budget.start_date
+                      ? parseLocalDate(budget.start_date.split('T')[0]).toLocaleDateString('es-MX')
                       : 'Fecha no disponible'}
-                    {budget.end_date && !isNaN(new Date(budget.end_date).getTime()) &&
-                      ` - ${new Date(budget.end_date).toLocaleDateString('es-MX')}`}
+                    {budget.end_date &&
+                      ` - ${parseLocalDate(budget.end_date.split('T')[0]).toLocaleDateString('es-MX')}`}
                   </CardDescription>
                 </div>
               </div>
@@ -361,7 +362,7 @@ export default function BudgetDetailPage() {
                         </p>
                       )}
                       <p className="text-sm text-muted-foreground mt-1">
-                        {new Date(tx.transaction_date).toLocaleDateString('es-MX', {
+                        {parseLocalDate(tx.transaction_date.split('T')[0]).toLocaleDateString('es-MX', {
                           day: 'numeric',
                           month: 'long',
                           year: 'numeric'

@@ -66,6 +66,7 @@ type CardType = BaseCardType & {
 };
 import { toast } from "@/lib/toast";
 import { DatePicker } from "@/components/ui/date-picker";
+import { parseLocalDate } from "@/lib/dateUtils";
 
 const CARD_BRANDS = [
     { value: "visa", label: "Visa" },
@@ -782,7 +783,7 @@ export default function CardsPage() {
                                                             <div className="text-right">
                                                                 <p className="text-xs text-white/70">Vence</p>
                                                                 <p className="text-sm font-semibold text-white">
-                                                                    {new Date(card.payment_due_date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                                                                    {parseLocalDate(card.payment_due_date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
                                                                 </p>
                                                             </div>
                                                         ) : (
@@ -812,7 +813,7 @@ export default function CardsPage() {
                                                             <p className="text-white/80">
                                                                 {(() => {
                                                                     const today = new Date();
-                                                                    const dueDate = new Date(card.payment_due_date);
+                                                                    const dueDate = parseLocalDate(card.payment_due_date);
                                                                     const diffTime = dueDate.getTime() - today.getTime();
                                                                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -826,7 +827,7 @@ export default function CardsPage() {
                                                         </div>
                                                         {card.statement_closing_date && (
                                                             <p className="text-xs text-white/70">
-                                                                Fecha de corte: {new Date(card.statement_closing_date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                                                                Fecha de corte: {parseLocalDate(card.statement_closing_date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
                                                             </p>
                                                         )}
                                                     </div>
@@ -987,10 +988,10 @@ export default function CardsPage() {
                                                         <div className="bg-white/25 backdrop-blur-md rounded-lg px-3 py-2 text-center border border-white/30 flex-shrink-0">
                                                             <p className="text-[10px] text-white/90 uppercase font-semibold mb-0.5">Vence</p>
                                                             <p className="text-lg font-bold leading-none">
-                                                                {new Date(card.payment_due_date).toLocaleDateString('es-MX', { day: 'numeric' })}
+                                                                {parseLocalDate(card.payment_due_date).toLocaleDateString('es-MX', { day: 'numeric' })}
                                                             </p>
                                                             <p className="text-[10px] text-white/90 uppercase font-medium mt-0.5">
-                                                                {new Date(card.payment_due_date).toLocaleDateString('es-MX', { month: 'short' })}
+                                                                {parseLocalDate(card.payment_due_date).toLocaleDateString('es-MX', { month: 'short' })}
                                                             </p>
                                                         </div>
                                                     ) : (

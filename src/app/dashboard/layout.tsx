@@ -11,6 +11,7 @@ import {
     Settings,
     FileText,
     MailOpen,
+    Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageLoadingState } from "@/components/ui/loading-state";
@@ -57,6 +58,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             name: "Sobres",
             href: "/dashboard/sobres",
             icon: <MailOpen className="h-5 w-5" />,
+        },
+        {
+            name: "Metas",
+            href: "/dashboard/metas",
+            icon: <Target className="h-5 w-5" />,
         },
         {
             name: "Tarjetas",

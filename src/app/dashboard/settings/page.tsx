@@ -40,6 +40,7 @@ import Link from "next/link";
 import WhatsAppLinkCard from "./_components/WhatsAppLinkCard";
 import PushNotificationSetup from "./_components/PushNotificationSetup";
 import { toast } from "@/lib/toast";
+import { parseLocalDate } from "@/lib/dateUtils";
 
 export default function SettingsPage() {
     const [apiKeys, setApiKeys] = useState<ApiKeyResponse[]>([]);
@@ -215,7 +216,18 @@ export default function SettingsPage() {
 
     const formatDate = (dateString: string | null) => {
         if (!dateString) return 'Nunca';
-        return new Date(dateString).toLocaleDateString('es-MX', {
+
+        // Parse the date string to extract date and time parts
+        const date = new Date(dateString);
+        const datePart = dateString.split('T')[0];
+        const localDate = parseLocalDate(datePart);
+
+        // Combine the correct local date with the time from the original datetime
+        const hours = date.getUTCHours();
+        const minutes = date.getUTCMinutes();
+        localDate.setHours(hours, minutes);
+
+        return localDate.toLocaleDateString('es-MX', {
             year: 'numeric',
             month: 'short',
             day: 'numeric',

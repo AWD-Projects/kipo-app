@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Loader2, FileText, Calendar, RefreshCw, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { parseLocalDate } from '@/lib/dateUtils';
 
 interface MonthlySummary {
   id: string;
@@ -304,7 +305,7 @@ export default function ReportesPage() {
                   </div>
                   <CardDescription className="flex items-center gap-1 text-xs">
                     <Clock className="h-3 w-3" />
-                    {new Date(summary.updated_at).toLocaleDateString('es-MX')}
+                    {parseLocalDate(summary.updated_at.split('T')[0]).toLocaleDateString('es-MX')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">

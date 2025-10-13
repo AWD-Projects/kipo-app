@@ -148,16 +148,16 @@ export default function PresupuestosPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/dashboard/sobres/sugerencias">
-              <Button variant="outline">
-                <Sparkles className="kipo-icon-sm mr-2" />
-                Sugerencias AI
-              </Button>
-            </Link>
             <Link href="/dashboard/sobres/nuevo">
               <Button>
                 <Plus className="kipo-icon-sm mr-2" />
                 Nuevo Sobre
+              </Button>
+            </Link>
+            <Link href="/dashboard/sobres/sugerencias">
+              <Button variant="outline">
+                <Sparkles className="kipo-icon-sm mr-2" />
+                Sugerencias AI
               </Button>
             </Link>
           </div>
@@ -238,7 +238,7 @@ export default function PresupuestosPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="kipo-stack-md">
+          <div className="kipo-stack">
             <h2 className="text-lg font-semibold">Sobres Activos</h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {budgets.map((budget) => (
